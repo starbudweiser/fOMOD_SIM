@@ -1,0 +1,1 @@
+../../Resources/pyzstd/_seekable_zstdfile.py

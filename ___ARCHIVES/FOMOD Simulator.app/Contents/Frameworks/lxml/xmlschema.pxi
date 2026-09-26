@@ -1,0 +1,1 @@
+../../Resources/lxml/xmlschema.pxi

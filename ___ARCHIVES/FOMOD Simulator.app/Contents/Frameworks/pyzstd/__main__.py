@@ -1,0 +1,1 @@
+../../Resources/pyzstd/__main__.py
