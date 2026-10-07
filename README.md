@@ -19,3 +19,9 @@ Simulateur d'installation de mods FOMOD pour Skyrim (FR/EN/IT/ES).
 python3 -m unittest discover tests
 npm run lint
 ```
+
+## Documentation
+
+- [Français](docs/README.fr.md)
+- [English](docs/README.en.md)
+- [Linux](docs/LINUX_PORT.md)
