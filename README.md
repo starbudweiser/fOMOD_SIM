@@ -1,20 +1,21 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# FOMOD Simulator
 
-# Run and deploy your AI Studio app
+Simulateur d'installation de mods FOMOD pour Skyrim (FR/EN/IT/ES).
 
-This contains everything you need to run your app locally.
+## Versions
 
-View your app in AI Studio: https://ai.studio/apps/8c25db32-c529-44a4-9b69-3472785fac6e
+- **Python (PyQt6)** : `python_app/` — lancement : `python3 -m python_app.main` ou `./run_macos_python.command`
+- **Script autonome** : `fomod_simulator.py`
+- **Web (React/Vite)** : `npm install && npm run dev` (ou `./run-macos.command`)
 
-## Run Locally
+## Build
 
-**Prerequisites:**  Node.js
+- macOS signé : `./build_macos.sh`
+- Archive de référence : `python3 archive_reference.py`
 
+## Tests
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+```bash
+python3 -m unittest discover tests
+npm run lint
+```

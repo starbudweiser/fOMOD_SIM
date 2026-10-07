@@ -11,3 +11,5 @@ node_modules/
 _ARCHIVES/
 ___ARCHIVES/
 /FOMOD Simulator.app/
+Icon?
+.env*
