@@ -35,23 +35,64 @@ def main():
 
     # 1. Copie de l'application macOS compilée et signée
     app_dest = os.path.join(REF_DIR, "FOMOD Simulator.app")
-    if os.path.exists(app_dest):
-        shutil.rmtree(app_dest)
-    shutil.copytree(os.path.join(PROJECT_DIR, "dist", "FOMOD Simulator.app"), app_dest, symlinks=True)
-    print("✅ FOMOD Simulator.app copié dans le dossier de référence.")
+    app_src = os.path.join(PROJECT_DIR, "FOMOD Simulator.app")
+    if not os.path.exists(app_src):
+        app_src = os.path.join(PROJECT_DIR, "dist", "FOMOD Simulator.app")
+    if os.path.exists(app_src) and app_src != app_dest:
+        if os.path.exists(app_dest):
+            shutil.rmtree(app_dest)
+        shutil.copytree(app_src, app_dest, symlinks=True)
+        print("✅ FOMOD Simulator.app copié dans le dossier de référence.")
 
-    # 2. Copie des livrables Python
-    shutil.copy(os.path.join(PROJECT_DIR, "dist", "fomod_simulator.pyz"), REF_DIR)
-    shutil.copy(os.path.join(PROJECT_DIR, "dist", "fomod_simulator-1.0.0-py2.py3-none-any.whl"), REF_DIR)
-    shutil.copy(os.path.join(PROJECT_DIR, "dist", "FOMOD_Simulator_Multiplatform.zip"), REF_DIR)
-    
+    # 2. Copie / Résolution des livrables Python
+    # 2.1 ZipApp pyz
+    pyz_dest = os.path.join(REF_DIR, "fomod_simulator.pyz")
+    for cand in [os.path.join(PROJECT_DIR, "dist", "fomod_simulator.pyz"), pyz_dest]:
+        if os.path.exists(cand) and cand != pyz_dest:
+            shutil.copy(cand, pyz_dest)
+            break
+    if not os.path.exists(pyz_dest):
+        import tempfile
+        import zipapp
+        standalone_src = "fomod_simulator.py" if os.path.exists(os.path.join(PROJECT_DIR, "fomod_simulator.py")) else "fomod_simulator_standalone.py"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with open(os.path.join(PROJECT_DIR, standalone_src), "r", encoding="utf-8") as sf:
+                with open(os.path.join(tmpdir, "__main__.py"), "w", encoding="utf-8") as df:
+                    df.write(sf.read())
+            zipapp.create_archive(tmpdir, pyz_dest, interpreter="/usr/bin/env python3", compressed=True)
+            os.chmod(pyz_dest, 0o755)
+
+    # 2.2 Wheel .whl
+    whl_dest = os.path.join(REF_DIR, "fomod_simulator-1.0.0-py2.py3-none-any.whl")
+    for cand in [
+        os.path.join(PROJECT_DIR, "dist", "fomod_simulator-1.0.0-py2.py3-none-any.whl"),
+        os.path.join(PROJECT_DIR, "dist", "fomod_simulator-1.0.0-py3-none-any.whl"),
+        whl_dest,
+    ]:
+        if os.path.exists(cand) and cand != whl_dest:
+            shutil.copy(cand, whl_dest)
+            break
+
+    # 2.3 Archive multi-plateforme
+    zip_dest = os.path.join(REF_DIR, "FOMOD_Simulator_Multiplatform.zip")
+    for cand in [
+        os.path.join(PROJECT_DIR, "dist", "downloads", "FOMOD_Simulator_Multiplatform.zip"),
+        os.path.join(PROJECT_DIR, "public", "downloads", "FOMOD_Simulator_Multiplatform.zip"),
+        os.path.join(PROJECT_DIR, "dist", "FOMOD_Simulator_Multiplatform.zip"),
+        zip_dest,
+    ]:
+        if os.path.exists(cand) and cand != zip_dest:
+            shutil.copy(cand, zip_dest)
+            break
+
+    # 2.4 Standalone Python script
     standalone_src = (
         "fomod_simulator.py"
         if os.path.exists(os.path.join(PROJECT_DIR, "fomod_simulator.py"))
         else "fomod_simulator_standalone.py"
     )
     shutil.copy(os.path.join(PROJECT_DIR, standalone_src), os.path.join(REF_DIR, "fomod_simulator.py"))
-    print("✅ Livrables Python (pyz, whl, zip, standalone) copiés.")
+    print("✅ Livrables Python (pyz, whl, zip, standalone) synchronisés.")
 
     # 3. Copie des assets
     assets_dest = os.path.join(REF_DIR, "assets")
