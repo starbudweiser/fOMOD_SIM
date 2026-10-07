@@ -1,1 +1,0 @@
-../../Resources/lxml/schematron.pxi

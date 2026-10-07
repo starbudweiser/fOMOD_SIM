@@ -118,6 +118,26 @@ class ArchiveIndex:
     dirs: Dict[str, str] = field(default_factory=dict)  # lower_path -> original_path
     archive_path: Optional[str] = None
     temp_dir: Optional[str] = None
+    _basename_map: Optional[Dict[str, List[VirtualFileEntry]]] = field(default=None, init=False, repr=False)
+
+    @property
+    def basename_map(self) -> Dict[str, List[VirtualFileEntry]]:
+        if self._basename_map is None:
+            bm: Dict[str, List[VirtualFileEntry]] = {}
+            for rel_key, entry in self.files.items():
+                if "__macosx" in rel_key:
+                    continue
+                b = rel_key.split("/")[-1]
+                if b not in bm:
+                    bm[b] = []
+                bm[b].append(entry)
+            for lst in bm.values():
+                lst.sort(key=lambda x: len(x.path))
+            self._basename_map = bm
+        return self._basename_map
+
+    def clear_cache(self) -> None:
+        self._basename_map = None
 
 
 @dataclass

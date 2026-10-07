@@ -1,8 +1,13 @@
 __pycache__/
+*.py[cod]
 .venv/
 venv/
 build/
 dist/
 .pyinstaller_cache/
+*.egg-info/
 node_modules/
 .DS_Store
+_ARCHIVES/
+___ARCHIVES/
+/FOMOD Simulator.app/

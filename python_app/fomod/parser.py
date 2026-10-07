@@ -22,20 +22,26 @@ from .types import (
 
 logger = logging.getLogger(__name__)
 
+RE_NORM_DOT_SLASH = re.compile(r"^(\.\/)+")
+RE_NORM_SLASHES = re.compile(r"^\/+|\/+$")
+RE_STRIP_NUM = re.compile(r"^\d+\s*[_-]*\s*")
+RE_HUMANIZE = re.compile(r"[_\-.]+")
+RE_IMAGE_EXT = re.compile(r"\.(jpe?g|png|bmp|webp|gif|dds|tga)$", re.I)
+
 
 def norm(p: Optional[str]) -> str:
     """Normalise un chemin : backslashes en slashes, supprime les './' et '/' de tête et fin."""
     if not p:
         return ""
     s = p.replace("\\", "/").strip()
-    s = re.sub(r"^(\.\/)+", "", s)
-    s = re.sub(r"^\/+|\/+$", "", s)
+    s = RE_NORM_DOT_SLASH.sub("", s)
+    s = RE_NORM_SLASHES.sub("", s)
     return s
 
 
 def strip_num_prefix(name: str) -> str:
     base = name.split("/")[-1] if "/" in name else name
-    return re.sub(r"^\d+\s*[_-]*\s*", "", base).lower()
+    return RE_STRIP_NUM.sub("", base).lower()
 
 
 def is_generic_label(s: str) -> bool:
@@ -57,7 +63,7 @@ def is_generic_label(s: str) -> bool:
 
 
 def humanize_token(tok: str) -> str:
-    t = re.sub(r"[_\-.]+", " ", tok).strip()
+    t = RE_HUMANIZE.sub(" ", tok).strip()
     return " ".join(w.capitalize() for w in t.split())
 
 
@@ -142,16 +148,21 @@ def find_file_in_index(index: ArchiveIndex, src: str) -> Optional[VirtualFileEnt
     # 4. Correspondance par nom de fichier final (basename)
     base = key.split("/")[-1]
     if base:
-        base_slash = "/" + base
-        base_cands: List[VirtualFileEntry] = []
-        for rel_key, entry in index.files.items():
-            if "__macosx" in rel_key:
-                continue
-            if rel_key == base or rel_key.endswith(base_slash):
-                base_cands.append(entry)
-        if base_cands:
-            base_cands.sort(key=lambda x: len(x.path))
-            return base_cands[0]
+        if hasattr(index, "basename_map"):
+            base_cands = index.basename_map.get(base)
+            if base_cands:
+                return base_cands[0]
+        else:
+            base_slash = "/" + base
+            fallback_cands: List[VirtualFileEntry] = []
+            for rel_key, entry in index.files.items():
+                if "__macosx" in rel_key:
+                    continue
+                if rel_key == base or rel_key.endswith(base_slash):
+                    fallback_cands.append(entry)
+            if fallback_cands:
+                fallback_cands.sort(key=lambda x: len(x.path))
+                return fallback_cands[0]
 
     # 5. Correspondance souple en ignorant les préfixes numériques
     key_stripped = strip_num_prefix(key)

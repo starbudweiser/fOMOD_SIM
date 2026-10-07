@@ -11,7 +11,10 @@ import zipfile
 import datetime
 
 PROJECT_DIR = os.path.abspath(os.path.dirname(__file__))
-ARCHIVE_BASE = os.path.join(PROJECT_DIR, "___ARCHIVES")
+ARCHIVE_BASE = os.path.join(
+    PROJECT_DIR,
+    "_ARCHIVES" if os.path.isdir(os.path.join(PROJECT_DIR, "_ARCHIVES")) else "___ARCHIVES",
+)
 REF_DIR = os.path.join(ARCHIVE_BASE, "v1.0.0_REFERENCE")
 
 
@@ -41,7 +44,13 @@ def main():
     shutil.copy(os.path.join(PROJECT_DIR, "dist", "fomod_simulator.pyz"), REF_DIR)
     shutil.copy(os.path.join(PROJECT_DIR, "dist", "fomod_simulator-1.0.0-py2.py3-none-any.whl"), REF_DIR)
     shutil.copy(os.path.join(PROJECT_DIR, "dist", "FOMOD_Simulator_Multiplatform.zip"), REF_DIR)
-    shutil.copy(os.path.join(PROJECT_DIR, "fomod_simulator_standalone.py"), REF_DIR)
+    
+    standalone_src = (
+        "fomod_simulator.py"
+        if os.path.exists(os.path.join(PROJECT_DIR, "fomod_simulator.py"))
+        else "fomod_simulator_standalone.py"
+    )
+    shutil.copy(os.path.join(PROJECT_DIR, standalone_src), os.path.join(REF_DIR, "fomod_simulator.py"))
     print("✅ Livrables Python (pyz, whl, zip, standalone) copiés.")
 
     # 3. Copie des assets
@@ -55,7 +64,7 @@ def main():
     pyz_hash = sha256_file(os.path.join(REF_DIR, "fomod_simulator.pyz"))
     whl_hash = sha256_file(os.path.join(REF_DIR, "fomod_simulator-1.0.0-py2.py3-none-any.whl"))
     zip_hash = sha256_file(os.path.join(REF_DIR, "FOMOD_Simulator_Multiplatform.zip"))
-    standalone_hash = sha256_file(os.path.join(REF_DIR, "fomod_simulator_standalone.py"))
+    standalone_hash = sha256_file(os.path.join(REF_DIR, "fomod_simulator.py"))
 
     # 5. Création du README_REFERENCE.md
     now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -89,7 +98,7 @@ def main():
      - Linux : 'run_linux.sh'
      - Dépendances & scripts autonomes inclus.
 
-5. **fomod_simulator_standalone.py** :
+5. **fomod_simulator.py** :
    - Script Python unique tout-en-un (sans dépendance modulaire interne).
 
 6. **assets/** :
@@ -106,7 +115,7 @@ def main():
   `{whl_hash}`
 - **FOMOD_Simulator_Multiplatform.zip :**
   `{zip_hash}`
-- **fomod_simulator_standalone.py :**
+- **fomod_simulator.py :**
   `{standalone_hash}`
 """
 
@@ -115,7 +124,16 @@ def main():
         f.write(readme_content)
     print("✅ Documentation de référence README_REFERENCE.md créée.")
 
-    # 6. Création de l'archive zip globale de référence
+    # 6. Nettoyage préventif des .DS_Store dans le dossier de référence
+    for root, _, files in os.walk(REF_DIR):
+        for f in files:
+            if f == ".DS_Store":
+                try:
+                    os.remove(os.path.join(root, f))
+                except OSError:
+                    pass
+
+    # 7. Création de l'archive zip globale de référence
     zip_out = os.path.join(ARCHIVE_BASE, "FOMOD_Simulator_v1.0.0_REFERENCE.zip")
     if os.path.exists(zip_out):
         os.remove(zip_out)
