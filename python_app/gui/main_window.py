@@ -198,7 +198,7 @@ class DragOverlayWidget(QWidget):
         painter.fillRect(self.rect(), QColor(10, 25, 45, 195))
 
         # Bordure pointillée cyan
-        pen = QPen(QColor("#0284c7"), 3, Qt.PenStyle.DashLine)
+        pen = QPen(QColor("#0369a1"), 3, Qt.PenStyle.DashLine)
         pen.setDashPattern([6, 6])
         painter.setPen(pen)
         painter.drawRect(self.rect().adjusted(6, 6, -6, -6))
@@ -260,7 +260,7 @@ class LoadingOverlayWidget(QWidget):
         card_layout.addWidget(status_box)
 
         sub_lbl = QLabel("Extraction en mémoire et génération de l'installateur à 3 colonnes...")
-        sub_lbl.setStyleSheet("font-size: 11px; color: #888888; border: none; background: transparent;")
+        sub_lbl.setStyleSheet("font-size: 11px; color: #8f8f8f; border: none; background: transparent;")
         sub_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.addWidget(sub_lbl)
 
@@ -303,8 +303,8 @@ class IndicatorWidget(QWidget):
                 painter.setBrush(QBrush(QColor("#ffffff")))
                 painter.drawEllipse(rect.center(), 3, 3)
             else:
-                painter.setPen(QPen(QColor("#4b4b54"), 1.2))
-                painter.setBrush(QBrush(QColor("#1f1f23")))
+                painter.setPen(QPen(QColor("#444444"), 1.2))
+                painter.setBrush(QBrush(QColor("#1e1e1e")))
                 painter.drawEllipse(rect)
         else:
             # Checkbox carré arrondi
@@ -316,8 +316,8 @@ class IndicatorWidget(QWidget):
                 painter.drawLine(rect.left() + 4, rect.top() + 8, rect.left() + 7, rect.bottom() - 4)
                 painter.drawLine(rect.left() + 7, rect.bottom() - 4, rect.right() - 4, rect.top() + 5)
             else:
-                painter.setPen(QPen(QColor("#4b4b54"), 1.2))
-                painter.setBrush(QBrush(QColor("#1f1f23")))
+                painter.setPen(QPen(QColor("#444444"), 1.2))
+                painter.setBrush(QBrush(QColor("#1e1e1e")))
                 painter.drawRoundedRect(rect, 4, 4)
 
         painter.end()
@@ -372,16 +372,16 @@ class OptionRowWidget(QFrame):
 
     def _update_style(self, hovered: bool=False):
         if self.is_selected:
-            bg = "#1e293b"
+            bg = "#262626"
             text_color = "#38bdf8"
             weight = "600"
         elif hovered:
-            bg = "#27272e"
+            bg = "#262626"
             text_color = "#ffffff"
             weight = "normal"
         else:
             bg = "transparent"
-            text_color = "#d4d4d8"
+            text_color = "#dddddd"
             weight = "normal"
 
         self.setStyleSheet(f"QFrame#OptionRow {{ background-color: {bg}; border: none; border-radius: 5px; }}")
@@ -403,7 +403,7 @@ class OptionRowWidget(QFrame):
 
 
 class MainWindow(QMainWindow):
-    """Fenêtre principale du Simulateur FOMOD en PyQt6 avec fidélité visuelle stricte."""
+    """Fenêtre principale de fOMODSIM en PyQt6 avec fidélité visuelle stricte."""
 
     def __init__(self):
         super().__init__()
@@ -418,7 +418,7 @@ class MainWindow(QMainWindow):
         # État interne
         self.archive_index: ArchiveIndex = ArchiveIndex()
         self.metadata: FomodMetadata = FomodMetadata(
-            name="Simulateur d'Installateur FOMOD",
+            name="fOMODSIM",
             author="",
             version="1.0.0",
             website="",
@@ -486,7 +486,7 @@ class MainWindow(QMainWindow):
         self.setAcceptDrops(True)
         central = QWidget()
         central.setObjectName("RootWidget")
-        central.setStyleSheet("QWidget#RootWidget { background-color: #18181b; }")
+        central.setStyleSheet("QWidget#RootWidget { background-color: #181818; }")
         self.setCentralWidget(central)
         root_layout = QVBoxLayout(central)
         root_layout.setContentsMargins(8, 8, 8, 8)
@@ -532,7 +532,7 @@ class MainWindow(QMainWindow):
         card.setObjectName("WelcomeCard")
         card.setStyleSheet("""
             QFrame#WelcomeCard {
-                background-color: #202020;
+                background-color: #1e1e1e;
                 border: 1px solid #333333;
                 border-radius: 12px;
             }
@@ -562,7 +562,7 @@ class MainWindow(QMainWindow):
 
         lang_divider = QFrame()
         lang_divider.setFrameShape(QFrame.Shape.HLine)
-        lang_divider.setStyleSheet("background-color: #2e2e2e; max-height: 1px; border: none; margin-bottom: 2px;")
+        lang_divider.setStyleSheet("background-color: #2c2c2c; max-height: 1px; border: none; margin-bottom: 2px;")
         card_layout.addWidget(lang_divider)
 
         # Badge circulaire avec icône 📦
@@ -572,7 +572,7 @@ class MainWindow(QMainWindow):
         badge.setStyleSheet("""
             QFrame#WelcomeBadge {
                 background-color: #262626;
-                border: 1px solid #3d3d3d;
+                border: 1px solid #404040;
                 border-radius: 32px;
             }
         """)
@@ -592,7 +592,7 @@ class MainWindow(QMainWindow):
 
         self.welcome_sub_lbl = QLabel(self.i18n.get("welcome", "subtitle"))
         self.welcome_sub_lbl.setWordWrap(True)
-        self.welcome_sub_lbl.setStyleSheet("font-size: 12px; color: #999999; border: none; line-height: 1.5; background: transparent;")
+        self.welcome_sub_lbl.setStyleSheet("font-size: 12px; color: #8f8f8f; border: none; line-height: 1.5; background: transparent;")
         self.welcome_sub_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.addWidget(self.welcome_sub_lbl)
 
@@ -608,7 +608,7 @@ class MainWindow(QMainWindow):
             }
             QFrame#WelcomeDropFrame:hover {
                 border-color: #38bdf8;
-                background-color: #1f2428;
+                background-color: #222222;
             }
         """)
         drop_frame.mousePressEvent = lambda _e: self._pick_archive_file()
@@ -624,13 +624,13 @@ class MainWindow(QMainWindow):
         drop_layout.addWidget(tray_icon)
 
         self.welcome_drop_txt = QLabel(self.i18n.get("welcome", "dropTitle"))
-        self.welcome_drop_txt.setStyleSheet("font-size: 14px; font-weight: 600; color: #f1f1f1; border: none; background: transparent;")
+        self.welcome_drop_txt.setStyleSheet("font-size: 14px; font-weight: 600; color: #ffffff; border: none; background: transparent;")
         self.welcome_drop_txt.setAlignment(Qt.AlignmentFlag.AlignCenter)
         drop_layout.addWidget(self.welcome_drop_txt)
 
         self.welcome_fmt_txt = QLabel(self.i18n.get("welcome", "supportedFormats"))
         self.welcome_fmt_txt.setTextFormat(Qt.TextFormat.RichText)
-        self.welcome_fmt_txt.setStyleSheet("font-size: 11px; color: #777777; border: none; background: transparent;")
+        self.welcome_fmt_txt.setStyleSheet("font-size: 11px; color: #707070; border: none; background: transparent;")
         self.welcome_fmt_txt.setAlignment(Qt.AlignmentFlag.AlignCenter)
         drop_layout.addWidget(self.welcome_fmt_txt)
 
@@ -662,17 +662,17 @@ class MainWindow(QMainWindow):
 
         self.welcome_btn_folder = QPushButton("📂  " + self.i18n.get("welcome", "loadFolderBtn"))
         self.welcome_btn_folder.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.welcome_btn_folder.setStyleSheet("color: #888888; font-size: 12px; background: transparent; border: none; text-decoration: underline;")
+        self.welcome_btn_folder.setStyleSheet("color: #8f8f8f; font-size: 12px; background: transparent; border: none; text-decoration: underline;")
         self.welcome_btn_folder.clicked.connect(self._pick_folder_mod)
         sub_actions.addWidget(self.welcome_btn_folder)
 
         sep = QLabel("•")
-        sep.setStyleSheet("color: #555555; border: none; background: transparent;")
+        sep.setStyleSheet("color: #444444; border: none; background: transparent;")
         sub_actions.addWidget(sep)
 
         self.welcome_btn_demo = QPushButton("🧪  " + self.i18n.get("welcome", "loadDemoBtn"))
         self.welcome_btn_demo.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.welcome_btn_demo.setStyleSheet("color: #888888; font-size: 12px; background: transparent; border: none; text-decoration: underline;")
+        self.welcome_btn_demo.setStyleSheet("color: #8f8f8f; font-size: 12px; background: transparent; border: none; text-decoration: underline;")
         self.welcome_btn_demo.clicked.connect(self.load_demo_mod)
         sub_actions.addWidget(self.welcome_btn_demo)
 
@@ -681,7 +681,7 @@ class MainWindow(QMainWindow):
         # Ligne de séparation et pied de carte
         divider = QFrame()
         divider.setFrameShape(QFrame.Shape.HLine)
-        divider.setStyleSheet("background-color: #2e2e2e; max-height: 1px; border: none; margin-top: 10px;")
+        divider.setStyleSheet("background-color: #2c2c2c; max-height: 1px; border: none; margin-top: 10px;")
         card_layout.addWidget(divider)
 
         footer_box = QHBoxLayout()
@@ -744,16 +744,16 @@ class MainWindow(QMainWindow):
             else:
                 btn.setStyleSheet("""
                     QPushButton {
-                        background-color: #18181a;
-                        color: #a1a1aa;
+                        background-color: #181818;
+                        color: #aaaaaa;
                         font-weight: 500;
                         font-size: 11px;
                         border-radius: 5px;
-                        border: 1px solid #303036;
+                        border: 1px solid #303030;
                         padding: 0 9px;
                     }
                     QPushButton:hover {
-                        background-color: #27272a;
+                        background-color: #262626;
                         color: #ffffff;
                     }
                 """)
@@ -776,12 +776,12 @@ class MainWindow(QMainWindow):
             count = len(self.installed_basenames)
             files_lbl = i18n.get("common", "filesDetected", default="fichiers détectés") if i18n else "fichiers détectés"
             self.data_status_label.setText(
-                f'<span style="font-weight:600; color:#dddddd;">{data_lbl}</span> <span style="color:#bbbbbb;">{os.path.basename(self.data_dir_path)}</span><br/><span style="color:#38bdf8; font-size:10px;">({count} {files_lbl})</span>'
+                f'<span style="font-weight:600; color:#dddddd;">{data_lbl}</span> <span style="color:#aaaaaa;">{os.path.basename(self.data_dir_path)}</span><br/><span style="color:#38bdf8; font-size:10px;">({count} {files_lbl})</span>'
             )
         else:
             not_set = i18n.get("common", "notSet", default="(non défini)") if i18n else "(non défini)"
             self.data_status_label.setText(
-                f'<span style="font-weight:600; color:#dddddd;">{data_lbl}</span> <span style="font-style:italic; color:#bbbbbb;">{not_set}</span><br/><span style="color:#888888; font-size:10px;">{click_lbl}</span>'
+                f'<span style="font-weight:600; color:#dddddd;">{data_lbl}</span> <span style="font-style:italic; color:#aaaaaa;">{not_set}</span><br/><span style="color:#8f8f8f; font-size:10px;">{click_lbl}</span>'
             )
 
     def retranslate_ui(self):
@@ -868,7 +868,7 @@ class MainWindow(QMainWindow):
                 self.env_badge_label.setText(i18n.get("header", "skyrimEnv", default="Skyrim SE/AE") if i18n else "Skyrim SE/AE")
             self.env_badge_label.show()
         else:
-            self.title_label.setText(i18n.get("header", "title", default="Simulateur d'Installateur FOMOD") if i18n else "Simulateur d'Installateur FOMOD")
+            self.title_label.setText(i18n.get("header", "title", default="fOMODSIM") if i18n else "fOMODSIM")
             self.btn_close.hide()
             self.pipe1.hide()
             self.step_counter_label.hide()
@@ -879,7 +879,7 @@ class MainWindow(QMainWindow):
     def _close_mod(self):
         self.cleanup_workers()
         self.steps.clear()
-        default_name = self.i18n.get("header", "title", default="Simulateur d'Installateur FOMOD") if hasattr(self, "i18n") else "Simulateur d'Installateur FOMOD"
+        default_name = self.i18n.get("header", "title", default="fOMODSIM") if hasattr(self, "i18n") else "fOMODSIM"
         self.metadata = FomodMetadata(name=default_name)
         self.selected_option_ids.clear()
         self.active_flags.clear()
@@ -924,28 +924,28 @@ class MainWindow(QMainWindow):
         self.btn_close.setToolTip(self.i18n.get("header", "closeModTooltip"))
         self.btn_close.setStyleSheet("""
             QPushButton {
-                background-color: #2b2b2b;
-                color: #cccccc;
-                border: 1px solid #3d3d3d;
+                background-color: #2c2c2c;
+                color: #dddddd;
+                border: 1px solid #404040;
                 border-radius: 4px;
                 padding: 0 10px;
                 font-size: 11px;
             }
-            QPushButton:hover { background-color: #383838; color: #ffffff; }
+            QPushButton:hover { background-color: #333333; color: #ffffff; }
         """)
         self.btn_close.clicked.connect(self._close_mod)
         right_box.addWidget(self.btn_close)
 
         self.pipe1 = QLabel("|")
-        self.pipe1.setStyleSheet("color: #555555; background: transparent; border: none;")
+        self.pipe1.setStyleSheet("color: #444444; background: transparent; border: none;")
         right_box.addWidget(self.pipe1)
 
         self.step_counter_label = QLabel("Étape 1 / 5")
-        self.step_counter_label.setStyleSheet("color: #888888; font-family: 'Menlo', monospace; font-size: 11px; background: transparent; border: none;")
+        self.step_counter_label.setStyleSheet("color: #8f8f8f; font-family: 'Menlo', monospace; font-size: 11px; background: transparent; border: none;")
         right_box.addWidget(self.step_counter_label)
 
         self.pipe2 = QLabel("|")
-        self.pipe2.setStyleSheet("color: #555555; background: transparent; border: none;")
+        self.pipe2.setStyleSheet("color: #444444; background: transparent; border: none;")
         right_box.addWidget(self.pipe2)
 
         self.env_badge_label = QLabel(self.i18n.get("header", "waitingArchive"))
@@ -953,7 +953,7 @@ class MainWindow(QMainWindow):
         right_box.addWidget(self.env_badge_label)
 
         self.pipe3 = QLabel("|")
-        self.pipe3.setStyleSheet("color: #555555; background: transparent; border: none;")
+        self.pipe3.setStyleSheet("color: #444444; background: transparent; border: none;")
         right_box.addWidget(self.pipe3)
 
         # Menu déroulant de changement de langue
@@ -964,9 +964,9 @@ class MainWindow(QMainWindow):
             self.header_lang_combo.addItem(f"{flag} {label}", code)
         self.header_lang_combo.setStyleSheet("""
             QComboBox {
-                background-color: #202024;
-                color: #f1f1f1;
-                border: 1px solid #383840;
+                background-color: #222222;
+                color: #ffffff;
+                border: 1px solid #333333;
                 border-radius: 4px;
                 padding: 0 6px;
                 font-size: 11px;
@@ -974,18 +974,18 @@ class MainWindow(QMainWindow):
             }
             QComboBox:hover {
                 border-color: #0ea5e9;
-                background-color: #28282e;
+                background-color: #262626;
             }
             QComboBox::drop-down {
                 border: none;
                 width: 14px;
             }
             QComboBox QAbstractItemView {
-                background-color: #1e1e24;
-                color: #e4e4e7;
+                background-color: #1e1e1e;
+                color: #dddddd;
                 selection-background-color: #0ea5e9;
                 selection-color: #ffffff;
-                border: 1px solid #383840;
+                border: 1px solid #333333;
                 border-radius: 4px;
                 padding: 4px;
             }
@@ -1003,7 +1003,7 @@ class MainWindow(QMainWindow):
     def _create_left_column(self) -> QWidget:
         col = QFrame()
         col.setObjectName("LeftColFrame")
-        col.setStyleSheet("QFrame#LeftColFrame { background-color: #202023; border: none; border-radius: 6px; }")
+        col.setStyleSheet("QFrame#LeftColFrame { background-color: #222222; border: none; border-radius: 6px; }")
         layout = QVBoxLayout(col)
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(8)
@@ -1019,7 +1019,7 @@ class MainWindow(QMainWindow):
         self.btn_open_fomod.setStyleSheet("""
             QPushButton {
                 background-color: #fbbf24;
-                color: #18181b;
+                color: #181818;
                 font-weight: bold;
                 font-size: 13px;
                 border-radius: 5px;
@@ -1038,7 +1038,7 @@ class MainWindow(QMainWindow):
         self.btn_mod_info.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_mod_info.setStyleSheet("""
             QPushButton {
-                background-color: #2c2c32;
+                background-color: #2c2c2c;
                 color: #dddddd;
                 font-size: 12px;
                 font-weight: 500;
@@ -1046,7 +1046,7 @@ class MainWindow(QMainWindow):
                 border: none;
                 padding: 6px 12px;
             }
-            QPushButton:hover { background-color: #383840; color: #ffffff; }
+            QPushButton:hover { background-color: #333333; color: #ffffff; }
         """)
         self.btn_mod_info.clicked.connect(self._show_mod_info_dialog)
         top_box.addWidget(self.btn_mod_info)
@@ -1057,7 +1057,7 @@ class MainWindow(QMainWindow):
         self.btn_choose_data.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_choose_data.setStyleSheet("""
             QPushButton {
-                background-color: #2c2c32;
+                background-color: #2c2c2c;
                 color: #dddddd;
                 font-size: 12px;
                 font-weight: 500;
@@ -1065,7 +1065,7 @@ class MainWindow(QMainWindow):
                 border-radius: 5px;
                 padding: 6px 12px;
             }
-            QPushButton:hover { background-color: #383840; color: #ffffff; }
+            QPushButton:hover { background-color: #333333; color: #ffffff; }
         """)
         self.btn_choose_data.clicked.connect(self._open_data_dir_modal)
         top_box.addWidget(self.btn_choose_data)
@@ -1074,7 +1074,7 @@ class MainWindow(QMainWindow):
         self.data_status_label = QLabel()
         self.data_status_label.setTextFormat(Qt.TextFormat.RichText)
         self.data_status_label.setText(
-            '<span style="font-weight:600; color:#dddddd;">Data :</span> <span style="font-style:italic; color:#bbbbbb;">(non défini)</span><br/><span style="color:#888888; font-size:10px;">(Cliquez pour simuler Skyrim)</span>'
+            '<span style="font-weight:600; color:#dddddd;">Data :</span> <span style="font-style:italic; color:#aaaaaa;">(non défini)</span><br/><span style="color:#8f8f8f; font-size:10px;">(Cliquez pour simuler Skyrim)</span>'
         )
         self.data_status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.data_status_label.setStyleSheet("font-size: 11px; line-height: 1.3; background: transparent; border: none;")
@@ -1093,7 +1093,7 @@ class MainWindow(QMainWindow):
         self.btn_choose_dest.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_choose_dest.setStyleSheet("""
             QPushButton {
-                background-color: #2c2c32;
+                background-color: #2c2c2c;
                 color: #dddddd;
                 font-size: 12px;
                 font-weight: 600;
@@ -1101,21 +1101,21 @@ class MainWindow(QMainWindow):
                 border-radius: 5px;
                 padding: 6px 12px;
             }
-            QPushButton:hover { background-color: #383840; color: #ffffff; }
+            QPushButton:hover { background-color: #333333; color: #ffffff; }
         """)
         self.btn_choose_dest.clicked.connect(self._pick_staging_destination)
         bottom_box.addWidget(self.btn_choose_dest)
 
         # Carte d'affichage de la destination
         dest_card = QFrame()
-        dest_card.setStyleSheet("background-color: #161618; border: none; border-radius: 5px; padding: 6px;")
+        dest_card.setStyleSheet("background-color: #181818; border: none; border-radius: 5px; padding: 6px;")
         dest_layout = QVBoxLayout(dest_card)
         dest_layout.setContentsMargins(4, 2, 4, 2)
         dest_layout.setSpacing(2)
 
         self.dest_hdr = QLabel(self.i18n.get("common", "destination", default="Destination :"))
         self.dest_hdr.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.dest_hdr.setStyleSheet("color: #888888; font-size: 10px; background: transparent; border: none;")
+        self.dest_hdr.setStyleSheet("color: #8f8f8f; font-size: 10px; background: transparent; border: none;")
         dest_layout.addWidget(self.dest_hdr)
 
         self.dest_path_label = QLabel(self.staging_dir_path)
@@ -1130,7 +1130,7 @@ class MainWindow(QMainWindow):
         self.btn_generate_staging.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_generate_staging.setStyleSheet("""
             QPushButton {
-                background-color: #0284c7;
+                background-color: #0369a1;
                 color: #ffffff;
                 font-weight: bold;
                 font-size: 12px;
@@ -1155,7 +1155,7 @@ class MainWindow(QMainWindow):
     def _create_center_column(self) -> QWidget:
         col = QFrame()
         col.setObjectName("CenterColFrame")
-        col.setStyleSheet("QFrame#CenterColFrame { background-color: #202023; border: none; border-radius: 6px; }")
+        col.setStyleSheet("QFrame#CenterColFrame { background-color: #222222; border: none; border-radius: 6px; }")
         layout = QVBoxLayout(col)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
@@ -1163,7 +1163,7 @@ class MainWindow(QMainWindow):
         # En-tête de l'étape courante
         step_header = QFrame()
         step_header.setObjectName("StepHeader")
-        step_header.setStyleSheet("QFrame#StepHeader { border-bottom: 1px solid #27272c; background-color: transparent; }")
+        step_header.setStyleSheet("QFrame#StepHeader { border-bottom: 1px solid #262626; background-color: transparent; }")
         step_header_layout = QHBoxLayout(step_header)
         step_header_layout.setContentsMargins(14, 12, 14, 12)
 
@@ -1174,7 +1174,7 @@ class MainWindow(QMainWindow):
         step_header_layout.addStretch()
 
         self.step_index_label = QLabel("1 / 5")
-        self.step_index_label.setStyleSheet("color: #a1a1aa; font-family: 'Menlo', monospace; font-size: 11px; border: none; background: transparent;")
+        self.step_index_label.setStyleSheet("color: #aaaaaa; font-family: 'Menlo', monospace; font-size: 11px; border: none; background: transparent;")
         step_header_layout.addWidget(self.step_index_label)
         layout.addWidget(step_header)
 
@@ -1182,9 +1182,9 @@ class MainWindow(QMainWindow):
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setStyleSheet("QScrollArea { background-color: transparent; border: none; }")
-        self.scroll_area.viewport().setStyleSheet("background-color: #202023; border: none;")
+        self.scroll_area.viewport().setStyleSheet("background-color: #222222; border: none;")
         self.groups_widget = QWidget()
-        self.groups_widget.setStyleSheet("background-color: #202023; border: none;")
+        self.groups_widget.setStyleSheet("background-color: #222222; border: none;")
         self.groups_layout = QVBoxLayout(self.groups_widget)
         self.groups_layout.setContentsMargins(12, 12, 12, 12)
         self.groups_layout.setSpacing(10)
@@ -1194,7 +1194,7 @@ class MainWindow(QMainWindow):
         # Barre de navigation en bas
         nav_bar = QFrame()
         nav_bar.setObjectName("NavBar")
-        nav_bar.setStyleSheet("QFrame#NavBar { border-top: 1px solid #27272c; background-color: #202023; border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; }")
+        nav_bar.setStyleSheet("QFrame#NavBar { border-top: 1px solid #262626; background-color: #222222; border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; }")
         nav_layout = QHBoxLayout(nav_bar)
         nav_layout.setContentsMargins(12, 12, 12, 12)
         nav_layout.setSpacing(10)
@@ -1204,7 +1204,7 @@ class MainWindow(QMainWindow):
         self.btn_prev.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_prev.setStyleSheet("""
             QPushButton {
-                background-color: #2c2c32;
+                background-color: #2c2c2c;
                 color: #dddddd;
                 font-weight: bold;
                 font-size: 12px;
@@ -1213,10 +1213,10 @@ class MainWindow(QMainWindow):
                 border: none;
                 padding: 8px 16px;
             }
-            QPushButton:hover { background-color: #383840; }
+            QPushButton:hover { background-color: #333333; }
             QPushButton:disabled {
-                background-color: #1e1e22;
-                color: #52525b;
+                background-color: #1e1e1e;
+                color: #444444;
                 border: none;
             }
         """)
@@ -1228,7 +1228,7 @@ class MainWindow(QMainWindow):
         self.btn_next.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_next.setStyleSheet("""
             QPushButton {
-                background-color: #0284c7;
+                background-color: #0369a1;
                 color: #ffffff;
                 font-weight: bold;
                 font-size: 12px;
@@ -1258,20 +1258,20 @@ class MainWindow(QMainWindow):
     def _create_right_column(self) -> QWidget:
         col = QFrame()
         col.setObjectName("RightColFrame")
-        col.setStyleSheet("QFrame#RightColFrame { background-color: #202023; border: none; border-radius: 6px; }")
+        col.setStyleSheet("QFrame#RightColFrame { background-color: #222222; border: none; border-radius: 6px; }")
         layout = QVBoxLayout(col)
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(12)
 
         # Titre Instructions & Description
         self.right_sec_title = QLabel("📖  " + self.i18n.get("preview", "instructionsTitle", default="INSTRUCTIONS & DESCRIPTION").upper())
-        self.right_sec_title.setStyleSheet("font-size: 11px; font-weight: bold; color: #a1a1aa; letter-spacing: 0.5px; background: transparent; border: none;")
+        self.right_sec_title.setStyleSheet("font-size: 11px; font-weight: bold; color: #aaaaaa; letter-spacing: 0.5px; background: transparent; border: none;")
         layout.addWidget(self.right_sec_title)
 
         # Description textuelle
         self.preview_desc_label = QLabel("Description de l'option...")
         self.preview_desc_label.setWordWrap(True)
-        self.preview_desc_label.setStyleSheet("color: #f4f4f5; font-size: 13px; line-height: 1.5; border: none; background: transparent;")
+        self.preview_desc_label.setStyleSheet("color: #ffffff; font-size: 13px; line-height: 1.5; border: none; background: transparent;")
         layout.addWidget(self.preview_desc_label)
 
         # Cadre d'image sans fond parasite ni bordure rugueuse
@@ -1453,7 +1453,7 @@ class MainWindow(QMainWindow):
         for grp in current_step.groups:
             grp_box = QFrame()
             grp_box.setObjectName("GroupCard")
-            grp_box.setStyleSheet("QFrame#GroupCard { background-color: #1a1a1d; border: none; border-radius: 6px; }")
+            grp_box.setStyleSheet("QFrame#GroupCard { background-color: #1a1a1a; border: none; border-radius: 6px; }")
             grp_layout = QVBoxLayout(grp_box)
             grp_layout.setContentsMargins(12, 10, 12, 10)
             grp_layout.setSpacing(6)
@@ -1461,20 +1461,20 @@ class MainWindow(QMainWindow):
             # En-tête du groupe
             grp_hdr = QHBoxLayout()
             grp_name = QLabel(grp.name)
-            grp_name.setStyleSheet("font-size: 12px; font-weight: bold; color: #e4e4e7; border: none; background: transparent;")
+            grp_name.setStyleSheet("font-size: 12px; font-weight: bold; color: #dddddd; border: none; background: transparent;")
             grp_hdr.addWidget(grp_name)
             grp_hdr.addStretch()
 
             is_single = grp.type in (GroupType.SelectExactlyOne, GroupType.SelectAtMostOne)
             choice_lbl = self.i18n.get("common", "singleChoice") if is_single else self.i18n.get("common", "multipleChoice")
             grp_type_lbl = QLabel(choice_lbl)
-            grp_type_lbl.setStyleSheet("font-size: 10px; color: #a1a1aa; border: none; background: transparent;")
+            grp_type_lbl.setStyleSheet("font-size: 10px; color: #aaaaaa; border: none; background: transparent;")
             grp_hdr.addWidget(grp_type_lbl)
             grp_layout.addLayout(grp_hdr)
 
             div = QFrame()
             div.setFrameShape(QFrame.Shape.HLine)
-            div.setStyleSheet("background-color: #26262a; max-height: 1px; border: none; margin-bottom: 2px;")
+            div.setStyleSheet("background-color: #262626; max-height: 1px; border: none; margin-bottom: 2px;")
             grp_layout.addWidget(div)
 
             # Options du groupe
@@ -1677,11 +1677,11 @@ class MainWindow(QMainWindow):
         self.installed_basenames = plugins
         if path:
             self.data_status_label.setText(
-                f'<span style="font-weight:600; color:#dddddd;">Data :</span> <span style="color:#bbbbbb;">{os.path.basename(path)}</span><br/><span style="color:#38bdf8; font-size:10px;">({len(plugins)} plugins détectés)</span>'
+                f'<span style="font-weight:600; color:#dddddd;">Data :</span> <span style="color:#aaaaaa;">{os.path.basename(path)}</span><br/><span style="color:#38bdf8; font-size:10px;">({len(plugins)} plugins détectés)</span>'
             )
         else:
             self.data_status_label.setText(
-                '<span style="font-weight:600; color:#dddddd;">Data :</span> <span style="font-style:italic; color:#bbbbbb;">(non défini)</span><br/><span style="color:#888888; font-size:10px;">(Cliquez pour simuler Skyrim)</span>'
+                '<span style="font-weight:600; color:#dddddd;">Data :</span> <span style="font-style:italic; color:#aaaaaa;">(non défini)</span><br/><span style="color:#8f8f8f; font-size:10px;">(Cliquez pour simuler Skyrim)</span>'
             )
         # Scan intelligent : sélectionne automatiquement les patches correspondant aux mods trouvés
         self.auto_select_options_for_environment(preserve_manual=True)

@@ -33,9 +33,9 @@ class ModInfoDialog(QDialog):
         self.resize(600, 460)
         self.setStyleSheet("""
             QDialog {
-                background-color: #1c1c1f;
+                background-color: #1e1e1e;
                 color: #ffffff;
-                border: 1px solid #27272a;
+                border: 1px solid #262626;
                 border-radius: 8px;
             }
         """)
@@ -56,7 +56,7 @@ class ModInfoDialog(QDialog):
 
         author_str = i18n.get("modals", "modInfo", "author", default="Auteur")
         author_label = QLabel(f"<b>{author_str} :</b> {metadata.author or '—'}")
-        author_label.setStyleSheet("color: #a1a1aa; border: none; background: transparent;")
+        author_label.setStyleSheet("color: #aaaaaa; border: none; background: transparent;")
         meta_row.addWidget(author_label)
 
         version_str = i18n.get("modals", "modInfo", "version", default="Version")
@@ -78,20 +78,20 @@ class ModInfoDialog(QDialog):
         # Séparateur subtil
         sep = QFrame()
         sep.setFrameShape(QFrame.Shape.HLine)
-        sep.setStyleSheet("background-color: #27272c; max-height: 1px; border: none;")
+        sep.setStyleSheet("background-color: #262626; max-height: 1px; border: none;")
         layout.addWidget(sep)
 
         # Description
         desc_str = i18n.get("modals", "modInfo", "description", default="Description")
         desc_title = QLabel(f"{desc_str} :")
-        desc_title.setStyleSheet("font-weight: 600; color: #e4e4e7; border: none; background: transparent;")
+        desc_title.setStyleSheet("font-weight: 600; color: #dddddd; border: none; background: transparent;")
         layout.addWidget(desc_title)
 
         desc_box = QTextEdit()
         desc_box.setReadOnly(True)
         desc_box.setPlainText(metadata.description or "")
         desc_box.setStyleSheet(
-            "background-color: #161618; border: none; border-radius: 6px; padding: 10px; color: #d4d4d8; font-size: 13px; line-height: 1.5;"
+            "background-color: #181818; border: none; border-radius: 6px; padding: 10px; color: #dddddd; font-size: 13px; line-height: 1.5;"
         )
         layout.addWidget(desc_box)
 
@@ -101,7 +101,7 @@ class ModInfoDialog(QDialog):
         close_btn = QPushButton(i18n.get("common", "close", default="Fermer"))
         close_btn.setStyleSheet("""
             QPushButton {
-                background-color: #28282c;
+                background-color: #262626;
                 color: #ffffff;
                 padding: 8px 20px;
                 border-radius: 5px;
@@ -109,7 +109,7 @@ class ModInfoDialog(QDialog):
                 font-weight: 500;
             }
             QPushButton:hover {
-                background-color: #323238;
+                background-color: #333333;
             }
         """)
         close_btn.clicked.connect(self.accept)

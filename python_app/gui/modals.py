@@ -61,9 +61,9 @@ class OpenModModal(QDialog):
         self.resize(560, 520)
         self.setStyleSheet("""
             QDialog {
-                background-color: #1c1c1f;
+                background-color: #1e1e1e;
                 color: #ffffff;
-                border: 1px solid #2e2e34;
+                border: 1px solid #303030;
                 border-radius: 8px;
             }
         """)
@@ -85,12 +85,12 @@ class OpenModModal(QDialog):
             QPushButton {
                 background-color: transparent;
                 border: none;
-                color: #a1a1aa;
+                color: #aaaaaa;
                 font-size: 15px;
             }
             QPushButton:hover {
                 color: #ffffff;
-                background-color: #27272b;
+                background-color: #262626;
                 border-radius: 4px;
             }
         """)
@@ -100,12 +100,12 @@ class OpenModModal(QDialog):
 
         div1 = QFrame()
         div1.setFrameShape(QFrame.Shape.HLine)
-        div1.setStyleSheet("background-color: #27272b; max-height: 1px; border: none;")
+        div1.setStyleSheet("background-color: #262626; max-height: 1px; border: none;")
         layout.addWidget(div1)
 
         # Section 1 : Depuis votre ordinateur
         sec1_lbl = QLabel(i18n.get("modals", "openMod", "fromComputer", default="Depuis votre ordinateur").upper())
-        sec1_lbl.setStyleSheet("font-size: 11px; font-weight: bold; color: #a1a1aa; border: none; background: transparent;")
+        sec1_lbl.setStyleSheet("font-size: 11px; font-weight: bold; color: #aaaaaa; border: none; background: transparent;")
         layout.addWidget(sec1_lbl)
 
         # Bouton 1 : Archive
@@ -113,14 +113,14 @@ class OpenModModal(QDialog):
         btn_archive.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_archive.setStyleSheet("""
             QPushButton {
-                background-color: #212125;
+                background-color: #222222;
                 border: none;
                 border-radius: 6px;
                 padding: 12px;
                 text-align: left;
             }
             QPushButton:hover {
-                background-color: #27272d;
+                background-color: #262626;
             }
         """)
         btn_archive_layout = QVBoxLayout(btn_archive)
@@ -139,7 +139,7 @@ class OpenModModal(QDialog):
 
         arch_desc = QLabel("Sélectionnez directement votre archive téléchargée (.zip, .rar ou .7z). Extraction et simulation instantanées.")
         arch_desc.setWordWrap(True)
-        arch_desc.setStyleSheet("font-size: 11px; color: #a1a1aa; border: none; background: transparent;")
+        arch_desc.setStyleSheet("font-size: 11px; color: #aaaaaa; border: none; background: transparent;")
         btn_archive_layout.addWidget(arch_desc)
 
         btn_archive.clicked.connect(lambda: (self.accept(), on_open_archive and on_open_archive()))
@@ -150,14 +150,14 @@ class OpenModModal(QDialog):
         btn_folder.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_folder.setStyleSheet("""
             QPushButton {
-                background-color: #212125;
+                background-color: #222222;
                 border: none;
                 border-radius: 6px;
                 padding: 12px;
                 text-align: left;
             }
             QPushButton:hover {
-                background-color: #27272d;
+                background-color: #262626;
             }
         """)
         btn_folder_layout = QVBoxLayout(btn_folder)
@@ -168,7 +168,7 @@ class OpenModModal(QDialog):
         folder_title = QLabel("📂 Parcourir un dossier décompressé")
         folder_title.setStyleSheet("font-size: 13px; font-weight: bold; color: #38bdf8; border: none; background: transparent;")
         folder_badge = QLabel("Dossier local")
-        folder_badge.setStyleSheet("font-size: 10px; color: #a1a1aa; padding: 2px 4px; border: none; background: transparent;")
+        folder_badge.setStyleSheet("font-size: 10px; color: #aaaaaa; padding: 2px 4px; border: none; background: transparent;")
         folder_title_row.addWidget(folder_title)
         folder_title_row.addStretch()
         folder_title_row.addWidget(folder_badge)
@@ -176,7 +176,7 @@ class OpenModModal(QDialog):
 
         folder_desc = QLabel("Si vous avez déjà extrait votre mod dans un répertoire local sur votre disque, sélectionnez directement ce dossier.")
         folder_desc.setWordWrap(True)
-        folder_desc.setStyleSheet("font-size: 11px; color: #a1a1aa; border: none; background: transparent;")
+        folder_desc.setStyleSheet("font-size: 11px; color: #aaaaaa; border: none; background: transparent;")
         btn_folder_layout.addWidget(folder_desc)
 
         btn_folder.clicked.connect(lambda: (self.accept(), on_open_folder and on_open_folder()))
@@ -185,7 +185,7 @@ class OpenModModal(QDialog):
         # Section 2 : Mods démo intégrés
         layout.addSpacing(4)
         sec2_lbl = QLabel("MODS DE DÉMONSTRATION RÉALISTES INTÉGRÉS")
-        sec2_lbl.setStyleSheet("font-size: 11px; font-weight: bold; color: #a1a1aa; border: none; background: transparent;")
+        sec2_lbl.setStyleSheet("font-size: 11px; font-weight: bold; color: #aaaaaa; border: none; background: transparent;")
         layout.addWidget(sec2_lbl)
 
         # Démo 1 : CBBE
@@ -193,14 +193,14 @@ class OpenModModal(QDialog):
         btn_cbbe.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_cbbe.setStyleSheet("""
             QPushButton {
-                background-color: #212125;
+                background-color: #222222;
                 border: none;
                 border-radius: 6px;
                 padding: 10px 12px;
                 text-align: left;
             }
             QPushButton:hover {
-                background-color: #27272d;
+                background-color: #262626;
             }
         """)
         cbbe_layout = QHBoxLayout(btn_cbbe)
@@ -220,14 +220,14 @@ class OpenModModal(QDialog):
         btn_smim.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_smim.setStyleSheet("""
             QPushButton {
-                background-color: #212125;
+                background-color: #222222;
                 border: none;
                 border-radius: 6px;
                 padding: 10px 12px;
                 text-align: left;
             }
             QPushButton:hover {
-                background-color: #27272d;
+                background-color: #262626;
             }
         """)
         smim_layout = QHBoxLayout(btn_smim)
@@ -261,9 +261,9 @@ class DataDirModal(QDialog):
         self.resize(580, 440)
         self.setStyleSheet("""
             QDialog {
-                background-color: #1c1c1f;
+                background-color: #1e1e1e;
                 color: #ffffff;
-                border: 1px solid #2e2e34;
+                border: 1px solid #303030;
                 border-radius: 8px;
             }
         """)
@@ -281,20 +281,20 @@ class DataDirModal(QDialog):
         layout.addWidget(title_lbl)
 
         info_lbl = QLabel(
-            "Le simulateur FOMOD peut inspecter votre dossier Skyrim Special Edition/Data "
+            "fOMODSIM peut inspecter votre dossier Skyrim Special Edition/Data "
             "pour pré-sélectionner automatiquement les options requises ou compatibles."
         )
         info_lbl.setWordWrap(True)
-        info_lbl.setStyleSheet("font-size: 12px; color: #a1a1aa; line-height: 1.4; border: none; background: transparent;")
+        info_lbl.setStyleSheet("font-size: 12px; color: #aaaaaa; line-height: 1.4; border: none; background: transparent;")
         layout.addWidget(info_lbl)
 
         # Chemin actuel
         path_box = QFrame()
-        path_box.setStyleSheet("background-color: #161618; border: none; border-radius: 6px; padding: 10px;")
+        path_box.setStyleSheet("background-color: #181818; border: none; border-radius: 6px; padding: 10px;")
         path_layout = QVBoxLayout(path_box)
         path_layout.setContentsMargins(4, 4, 4, 4)
         path_hdr = QLabel("Répertoire actuellement lié :")
-        path_hdr.setStyleSheet("font-size: 10px; font-weight: bold; color: #888888; border: none; background: transparent;")
+        path_hdr.setStyleSheet("font-size: 10px; font-weight: bold; color: #8f8f8f; border: none; background: transparent;")
         path_layout.addWidget(path_hdr)
 
         self.path_val_lbl = QLabel(self.data_path or "(Aucun dossier sélectionné)")
@@ -307,7 +307,7 @@ class DataDirModal(QDialog):
         pick_btn = QPushButton("📁 Parcourir le disque...")
         pick_btn.setStyleSheet("""
             QPushButton {
-                background-color: #28282c;
+                background-color: #262626;
                 border: none;
                 color: #ffffff;
                 font-size: 12px;
@@ -315,7 +315,7 @@ class DataDirModal(QDialog):
                 border-radius: 5px;
             }
             QPushButton:hover {
-                background-color: #323238;
+                background-color: #333333;
             }
         """)
         pick_btn.clicked.connect(self._pick_folder)
@@ -324,7 +324,7 @@ class DataDirModal(QDialog):
         sim_btn = QPushButton("⚡ Simuler plugins Skyrim (CBPC, SkyUI, skee64)")
         sim_btn.setStyleSheet("""
             QPushButton {
-                background-color: #0284c7;
+                background-color: #0369a1;
                 border: none;
                 color: #ffffff;
                 font-size: 12px;
@@ -342,12 +342,12 @@ class DataDirModal(QDialog):
 
         # Fichiers détectés
         self.detected_lbl = QLabel(f"Plugins et DLLs détectés ({len(self.plugins)}) :")
-        self.detected_lbl.setStyleSheet("font-size: 11px; font-weight: bold; color: #a1a1aa; margin-top: 4px; border: none; background: transparent;")
+        self.detected_lbl.setStyleSheet("font-size: 11px; font-weight: bold; color: #aaaaaa; margin-top: 4px; border: none; background: transparent;")
         layout.addWidget(self.detected_lbl)
 
         self.plugins_text = QTextEdit()
         self.plugins_text.setReadOnly(True)
-        self.plugins_text.setStyleSheet("background-color: #161618; border: none; color: #d4d4d8; font-family: 'Menlo', monospace; font-size: 11px; padding: 6px; border-radius: 6px;")
+        self.plugins_text.setStyleSheet("background-color: #181818; border: none; color: #dddddd; font-family: 'Menlo', monospace; font-size: 11px; padding: 6px; border-radius: 6px;")
         self._update_plugins_display()
         layout.addWidget(self.plugins_text)
 
@@ -364,7 +364,7 @@ class DataDirModal(QDialog):
                 border: none;
             }
             QPushButton:hover {
-                background-color: #0284c7;
+                background-color: #0369a1;
             }
         """)
         close_btn.clicked.connect(self._apply_and_close)
@@ -426,9 +426,9 @@ class StagingResultModal(QDialog):
         self.resize(860, 620)
         self.setStyleSheet("""
             QDialog {
-                background-color: #1c1c1f;
+                background-color: #1e1e1e;
                 color: #ffffff;
-                border: 1px solid #2e2e34;
+                border: 1px solid #303030;
                 border-radius: 8px;
             }
         """)
@@ -455,12 +455,12 @@ class StagingResultModal(QDialog):
             QPushButton {
                 background-color: transparent;
                 border: none;
-                color: #a1a1aa;
+                color: #aaaaaa;
                 font-size: 15px;
             }
             QPushButton:hover {
                 color: #ffffff;
-                background-color: #27272b;
+                background-color: #262626;
                 border-radius: 4px;
             }
         """)
@@ -473,7 +473,7 @@ class StagingResultModal(QDialog):
             f"Taille totale : <b>{format_bytes(result.total_size)}</b> &bull; "
             f"Destination : <span style='color:#38bdf8;'>{staging_dir_path}</span>"
         )
-        sub_info.setStyleSheet("font-size: 12px; color: #a1a1aa; border: none; background: transparent;")
+        sub_info.setStyleSheet("font-size: 12px; color: #aaaaaa; border: none; background: transparent;")
         layout.addWidget(sub_info)
 
         # Onglets : Fichiers installés / Journal
@@ -481,12 +481,12 @@ class StagingResultModal(QDialog):
         tabs.setStyleSheet("""
             QTabWidget::pane {
                 border: none;
-                background-color: #161618;
+                background-color: #181818;
                 border-radius: 6px;
             }
             QTabBar::tab {
-                background-color: #202024;
-                color: #a1a1aa;
+                background-color: #222222;
+                color: #aaaaaa;
                 padding: 6px 16px;
                 border: none;
                 border-top-left-radius: 5px;
@@ -494,7 +494,7 @@ class StagingResultModal(QDialog):
                 margin-right: 4px;
             }
             QTabBar::tab:selected {
-                background-color: #161618;
+                background-color: #181818;
                 color: #0ea5e9;
                 font-weight: bold;
                 border: none;
@@ -510,9 +510,9 @@ class StagingResultModal(QDialog):
         tree.setHeaderLabels(["Destination dans Data", "Taille", "Source Option"])
         tree.setStyleSheet("""
             QTreeWidget {
-                background-color: #161618;
+                background-color: #181818;
                 border: none;
-                color: #f4f4f5;
+                color: #ffffff;
                 font-family: 'Menlo', monospace;
                 font-size: 12px;
             }
@@ -525,11 +525,11 @@ class StagingResultModal(QDialog):
                 color: #ffffff;
             }
             QHeaderView::section {
-                background-color: #1f1f23;
-                color: #a1a1aa;
+                background-color: #1e1e1e;
+                color: #aaaaaa;
                 padding: 6px 8px;
                 border: none;
-                border-bottom: 1px solid #27272b;
+                border-bottom: 1px solid #262626;
                 font-weight: 600;
                 font-size: 11px;
             }
@@ -571,7 +571,7 @@ class StagingResultModal(QDialog):
         tab_log_layout.setContentsMargins(8, 8, 8, 8)
         log_edit = QTextEdit()
         log_edit.setReadOnly(True)
-        log_edit.setStyleSheet("background-color: #161618; border: none; color: #a1a1aa; font-family: 'Menlo', monospace; font-size: 11px;")
+        log_edit.setStyleSheet("background-color: #181818; border: none; color: #aaaaaa; font-family: 'Menlo', monospace; font-size: 11px;")
         log_edit.setText("\n".join(result.log) if result.log else "Aucun avertissement. Installation propre.")
         tab_log_layout.addWidget(log_edit)
         tabs.addTab(tab_log, "Journal de staging")
@@ -583,7 +583,7 @@ class StagingResultModal(QDialog):
         export_zip_btn = QPushButton("📦 Exporter en archive ZIP")
         export_zip_btn.setStyleSheet("""
             QPushButton {
-                background-color: #28282c;
+                background-color: #262626;
                 border: none;
                 color: #ffffff;
                 font-size: 12px;
@@ -592,7 +592,7 @@ class StagingResultModal(QDialog):
                 border-radius: 5px;
             }
             QPushButton:hover {
-                background-color: #323238;
+                background-color: #333333;
             }
         """)
         export_zip_btn.clicked.connect(self._export_zip)
@@ -612,7 +612,7 @@ class StagingResultModal(QDialog):
                 border: none;
             }
             QPushButton:hover {
-                background-color: #0284c7;
+                background-color: #0369a1;
             }
         """)
         close_dialog_btn.clicked.connect(self.accept)
@@ -653,8 +653,8 @@ class ImagePreviewModal(QDialog):
         self.setMinimumSize(400, 300)
         self.setStyleSheet("""
             QDialog {
-                background-color: #141416;
-                border: 1px solid #2e2e34;
+                background-color: #181818;
+                border: 1px solid #303030;
                 border-radius: 8px;
             }
         """)
@@ -666,7 +666,7 @@ class ImagePreviewModal(QDialog):
         scroll.setWidgetResizable(True)
         scroll.setStyleSheet("""
             QScrollArea {
-                background-color: #161618;
+                background-color: #181818;
                 border: none;
                 border-radius: 6px;
             }
@@ -676,7 +676,7 @@ class ImagePreviewModal(QDialog):
                 height: 6px;
             }
             QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
-                background-color: #333338;
+                background-color: #333333;
                 border-radius: 3px;
             }
             QScrollBar::handle:hover {
@@ -685,7 +685,7 @@ class ImagePreviewModal(QDialog):
         """)
 
         container = QWidget()
-        container.setStyleSheet("background-color: #161618; border: none;")
+        container.setStyleSheet("background-color: #181818; border: none;")
         container_layout = QVBoxLayout(container)
         container_layout.setContentsMargins(12, 12, 12, 12)
         container_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -701,7 +701,7 @@ class ImagePreviewModal(QDialog):
 
         bottom_bar = QHBoxLayout()
         res_info = QLabel(f"Dimensions : {pixmap.width()} × {pixmap.height()} px (taille réelle)")
-        res_info.setStyleSheet("color: #a1a1aa; font-size: 11px; background: transparent; border: none;")
+        res_info.setStyleSheet("color: #aaaaaa; font-size: 11px; background: transparent; border: none;")
         bottom_bar.addWidget(res_info)
 
         bottom_bar.addStretch()
@@ -709,7 +709,7 @@ class ImagePreviewModal(QDialog):
         close_btn = QPushButton("Fermer")
         close_btn.setStyleSheet("""
             QPushButton {
-                background-color: #28282c;
+                background-color: #262626;
                 color: #ffffff;
                 padding: 6px 16px;
                 border-radius: 5px;
@@ -717,7 +717,7 @@ class ImagePreviewModal(QDialog):
                 font-weight: 500;
             }
             QPushButton:hover {
-                background-color: #323238;
+                background-color: #333333;
             }
         """)
         close_btn.clicked.connect(self.accept)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Simulateur FOMOD v1.0 - Skyrim Modding & Staging Tool
+fOMODSIM v1.0 - Skyrim Modding & Staging Tool
 Portage PyQt6 autonome, non-bloquant et multi-format (.zip, .7z, .rar, dossiers).
 """
 
@@ -22,9 +22,11 @@ from PyQt6.QtCore import Qt
 try:
     from python_app.gui.main_window import MainWindow
     from python_app.gui.theme import DARK_THEME_QSS
+    from python_app.gui import socle_qt
 except ImportError:
     from gui.main_window import MainWindow
     from gui.theme import DARK_THEME_QSS
+    from gui import socle_qt
 
 
 def setup_logging():
@@ -41,7 +43,7 @@ def setup_logging():
 def main():
     setup_logging()
     logger = logging.getLogger("fomod_simulator")
-    logger.info("Démarrage du Simulateur FOMOD v1.0 (PyQt6)")
+    logger.info("Démarrage de fOMODSIM v1.0 (PyQt6)")
 
     def handle_exception(exc_type, exc_value, exc_traceback):
         if issubclass(exc_type, KeyboardInterrupt):
@@ -60,14 +62,15 @@ def main():
         QApplication.setAttribute(attr_pixmaps, True)
 
     app = QApplication(sys.argv)
+    socle_qt.apply(app, full=False)  # design system Socle (palette + règles de base)
     if sys.platform == "darwin":
         from PyQt6.QtGui import QFont
         app.setFont(QFont(".AppleSystemUIFont", 13))
     app.setStyle("Fusion")
-    app.setApplicationName("FOMOD Simulator")
+    app.setApplicationName("fOMODSIM")
     app.setApplicationVersion("1.0.0")
     app.setOrganizationName("SkyrimTools")
-    app.setStyleSheet(DARK_THEME_QSS)
+    app.setStyleSheet(socle_qt.qss(full=False) + DARK_THEME_QSS)
 
     window = MainWindow()
 
