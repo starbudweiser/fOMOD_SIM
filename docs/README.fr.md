@@ -1,4 +1,4 @@
-# FOMOD Simulator — Documentation (Français)
+# fOMODSIM — Documentation (Français)
 
 🇬🇧 [English version](README.en.md) · 🐧 [Portage Linux / Linux port](LINUX_PORT.md)
 
@@ -6,7 +6,7 @@
 
 ## 1. Présentation
 
-**FOMOD Simulator** est une application de bureau qui permet d'ouvrir l'archive d'un mod Skyrim contenant un installeur **FOMOD** (`fomod/ModuleConfig.xml`), de parcourir ses étapes d'installation, de tester les conditions logiques, puis de **générer le résultat (« staging ») dans un dossier de votre choix**, sans jamais toucher à votre installation de Skyrim.
+**fOMODSIM** est une application de bureau qui permet d'ouvrir l'archive d'un mod Skyrim contenant un installeur **FOMOD** (`fomod/ModuleConfig.xml`), de parcourir ses étapes d'installation, de tester les conditions logiques, puis de **générer le résultat (« staging ») dans un dossier de votre choix**, sans jamais toucher à votre installation de Skyrim.
 
 Fonctionnalités principales :
 
@@ -29,7 +29,7 @@ Fonctionnalités principales :
 
 | Version | Prérequis |
 |---|---|
-| **Application macOS** (`FOMOD Simulator.app`) | macOS sur Apple Silicon (arm64). Aucun Python à installer. |
+| **Application macOS** (`fOMODSIM.app`) | macOS sur Apple Silicon (arm64). Aucun Python à installer. |
 | **Python (multi-plateforme)** | Python ≥ 3.9, `PyQt6 ≥ 6.4`, `py7zr ≥ 0.20` |
 | **Fichiers `.rar`** (optionnel) | `7-Zip`/`p7zip`, `unrar` ou `bsdtar` installé (ex. `brew install p7zip`) |
 
@@ -39,8 +39,8 @@ Skyrim n'a **pas** besoin d'être installé.
 
 ### macOS (application compilée)
 
-1. Décompressez `FOMOD_Simulator_macOS_arm64.zip` (ou utilisez `FOMOD Simulator.app`).
-2. Glissez `FOMOD Simulator.app` dans `/Applications`.
+1. Décompressez `fOMODSIM_macOS_arm64.zip` (ou utilisez `fOMODSIM.app`).
+2. Glissez `fOMODSIM.app` dans `/Applications`.
 3. Premier lancement : l'application est signée **ad hoc** (non notariée). Si macOS la bloque : **clic droit → Ouvrir → Ouvrir**, ou *Réglages Système → Confidentialité et sécurité → Ouvrir quand même*.
 
 ### Python (macOS / Windows / Linux)
@@ -95,5 +95,5 @@ Sur l'écran d'accueil, choisissez la langue (🇫🇷 🇬🇧 🇮🇹 🇪�
 ## 7. Compiler soi-même (macOS)
 
 ```bash
-./build_app.sh     # génère ./FOMOD Simulator.app (signé ad hoc, avec icône)
+./build_app.sh     # génère ./fOMODSIM.app (signé ad hoc, avec icône)
 ```

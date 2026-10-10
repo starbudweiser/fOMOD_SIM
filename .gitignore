@@ -10,7 +10,7 @@ node_modules/
 .DS_Store
 _ARCHIVES/
 ___ARCHIVES/
-/FOMOD Simulator.app/
+/fOMODSIM.app/
 Icon?
 .env*
 .build_tmp.*/

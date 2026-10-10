@@ -1,12 +1,12 @@
 #!/bin/bash
 # -------------------------------------------------------------
-# Lanceur macOS de la version web (React/Vite) du Simulateur FOMOD
+# Lanceur macOS de la version web (React/Vite) de fOMODSIM
 # -------------------------------------------------------------
 
 cd "$(dirname "$0")/../web" || exit 1
 
 echo "========================================================"
-echo "    Démarrage du Simulateur FOMOD v1.0 (Web, macOS)"
+echo "    Démarrage de fOMODSIM v1.0 (Web, macOS)"
 echo "========================================================"
 
 # 1. Vérification de Node.js

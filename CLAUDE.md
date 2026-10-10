@@ -1,9 +1,9 @@
-# FOMOD Simulator
+# fOMODSIM
 
 Simulateur d'installateurs FOMOD pour Skyrim SE/AE sur macOS : on ouvre une archive de mod (ZIP, 7Z, RAR ou dossier), on parcourt ses étapes d'installation, on teste les conditions et les flags, puis on génère un staging (la liste des fichiers qui seraient installés), sans jamais toucher au jeu. Distribué sur Nexus Mods.
 
 Deux implémentations du même produit, à garder en parité fonctionnelle et visuelle :
-- **`python_app/`** — application desktop PyQt6, compilée en `FOMOD Simulator.app`. C'est la version livrée.
+- **`python_app/`** — application desktop PyQt6, compilée en `fOMODSIM.app`. C'est la version livrée.
 - **`web/`** — version React 19 + Vite + Tailwind v4 (prévisualisation, démo).
 
 Toute évolution d'interface ou de moteur se fait **dans les deux versions** sauf mention contraire.
@@ -28,7 +28,7 @@ cd web && npm run build                   # sortie dans ../dist (racine du proje
 - `python_app/gui/` : `main_window.py`, `modals.py`, `mod_info_dialog.py`, `preview_generator.py`, `workers.py` (QThread), `theme.py` (QSS).
 - `python_app/locales/` et `web/src/locales/` : un fichier par langue (`fr`, `en`, `es`, `it`).
 - `web/src/utils/` : équivalents TypeScript du moteur (`fomodParser.ts`, `fomodStaging.ts`, `archiveExtractor.ts` via libarchive.js en WebAssembly).
-- `packaging/FOMOD_Simulator.spec` : PyInstaller, chemins calculés depuis `SPECPATH`.
+- `packaging/fOMODSIM.spec` : PyInstaller, chemins calculés depuis `SPECPATH`.
 - `docs/` : README FR/EN, `LINUX_PORT.md`, `NEXUS_PAGE.md`, captures.
 - `_ARCHIVES/` : versions de référence (v1.0.0), non versionné. Ne pas y toucher.
 
@@ -37,7 +37,7 @@ cd web && npm run build                   # sortie dans ../dist (racine du proje
 - **Langue** : français par défaut. Tout texte d'interface passe par les fichiers de langue, dans les 4 langues, des deux côtés (persistance : `QSettings` en Python, `localStorage` en web).
 - **Interface** : sombre, flat, sans bordures superflues — l'utilisateur rejette les contours décoratifs. Suivre le design system **Socle** (voir `~/.claude/CLAUDE.md`). Les couleurs Tailwind sont encore écrites en dur dans `web/src/App.tsx` ; les migrer vers les tokens Socle quand on touche à ces zones.
 - **Racine propre** : l'utilisateur veut une arborescence rangée en dossiers. Aucun fichier temporaire à la racine ; `build_app.sh` travaille dans `.build_tmp.*` et nettoie tout via `trap EXIT`.
-- **Ne jamais supprimer `dist/`** (build web servi par la preview Vite) ni `FOMOD Simulator.app`, `.venv`, `.vscode`, `Icon?`, `_ARCHIVES/` sans demander.
+- **Ne jamais supprimer `dist/`** (build web servi par la preview Vite) ni `fOMODSIM.app`, `.venv`, `.vscode`, `Icon?`, `_ARCHIVES/` sans demander.
 - **Git** : messages en français, préfixes `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `build:`. Le tag `v1.0.0` est la version de référence.
 - **Dépendances** : `PyQt6`, `py7zr` (requis). Optionnels, absents de `requirements.txt` : `Pillow` (images DDS/TGA, chargé via `importlib`) et `rarfile` (RAR). Sans `rarfile`, l'extraction RAR se rabat sur les outils système `7z`, `unrar` ou `bsdtar`.
 

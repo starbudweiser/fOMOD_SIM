@@ -86,7 +86,7 @@ class TestMainWindowGUI(unittest.TestCase):
         # 1. Anglais
         self.window._change_language("en")
         self.assertEqual(self.window.i18n.current_language, "en")
-        self.assertEqual(self.window.windowTitle(), "FOMOD Installer Simulator")
+        self.assertEqual(self.window.windowTitle(), "fOMODSIM")
         self.assertEqual(self.window.btn_close.text(), "← Close mod")
         self.assertEqual(self.window.btn_next.text(), "CONTINUE →")
 

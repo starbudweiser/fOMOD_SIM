@@ -20,7 +20,7 @@ export const en: Translations = {
     filesDetected: 'files detected',
   },
   header: {
-    title: 'FOMOD Installer Simulator',
+    title: 'fOMODSIM',
     closeMod: 'Close mod',
     closeModTooltip: 'Close current mod and return to welcome screen',
     waitingArchive: 'Skyrim SE/AE • Waiting for archive',
@@ -34,7 +34,7 @@ export const en: Translations = {
     generateStaging: 'GENERATE STAGING',
   },
   welcome: {
-    title: 'FOMOD Installer Simulator',
+    title: 'fOMODSIM',
     subtitle: 'Open or drag-and-drop a Skyrim mod archive to explore installation steps, test logical conditions, and simulate staging without altering your game files.',
     dropTitle: 'Drag and drop your archive here',
     supportedFormats: 'Supported formats:',

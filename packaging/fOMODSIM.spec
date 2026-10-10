@@ -1,5 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
-# Spec PyInstaller — FOMOD Simulator (macOS .app)
+# Spec PyInstaller — fOMODSIM (macOS .app)
 # Utilisé par scripts/build_app.sh (chemins résolus depuis la racine du projet).
 import os
 
@@ -61,7 +61,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='FOMOD_Simulator',
+    name='fOMODSIM',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -82,18 +82,18 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='FOMOD_Simulator',
+    name='fOMODSIM',
 )
 
 # Configuration Bundle macOS (.app) avec Icône personnalisée
 app = BUNDLE(
     coll,
-    name='FOMOD Simulator.app',
+    name='fOMODSIM.app',
     icon=icon_path,
     bundle_identifier='com.skyrimtools.fomodsimulator',
     info_plist={
-        'CFBundleName': 'FOMOD Simulator',
-        'CFBundleDisplayName': 'FOMOD Simulator',
+        'CFBundleName': 'fOMODSIM',
+        'CFBundleDisplayName': 'fOMODSIM',
         'CFBundleIdentifier': 'com.skyrimtools.fomodsimulator',
         'CFBundleVersion': '1.0.0',
         'CFBundleShortVersionString': '1.0.0',

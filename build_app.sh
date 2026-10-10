@@ -1,7 +1,7 @@
 #!/bin/bash
 # -------------------------------------------------------------
-# Compilation macOS de FOMOD Simulator (PyInstaller)
-# Produit "FOMOD Simulator.app" (signée ad hoc, icône incluse)
+# Compilation macOS de fOMODSIM (PyInstaller)
+# Produit "fOMODSIM.app" (signée ad hoc, icône incluse)
 # directement à la racine du projet.
 # Tous les fichiers/dossiers temporaires sont supprimés en fin
 # de script (succès ou échec).
@@ -10,8 +10,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-APP_NAME="FOMOD Simulator.app"
-SPEC="$ROOT/packaging/FOMOD_Simulator.spec"
+APP_NAME="fOMODSIM.app"
+SPEC="$ROOT/packaging/fOMODSIM.spec"
 TARGET="$ROOT/$APP_NAME"
 
 cd "$ROOT"
@@ -28,7 +28,7 @@ cleanup() {
 trap cleanup EXIT
 
 echo "=========================================================="
-echo "    Compilation native de FOMOD Simulator (.app)"
+echo "    Compilation native de fOMODSIM (.app)"
 echo "=========================================================="
 
 # 1. Prérequis

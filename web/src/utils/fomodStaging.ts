@@ -267,7 +267,7 @@ export async function exportStagingAsZip(stagingResult: StagingResult): Promise<
       zip.file(item.destinationPath, item.blob);
     } else {
       // Contenu de démonstration si le fichier est issu d'un mod virtuel/simulé
-      const dummyContent = `// Fichier généré par Simulateur FOMOD : ${item.destinationPath}\n// Source: ${item.sourcePath}\n// Option: ${item.matchedFromOption}\n`;
+      const dummyContent = `// Fichier généré par fOMODSIM : ${item.destinationPath}\n// Source: ${item.sourcePath}\n// Option: ${item.matchedFromOption}\n`;
       zip.file(item.destinationPath, dummyContent);
     }
   }

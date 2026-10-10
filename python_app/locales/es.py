@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Localización Española para FOMOD Simulator.
+Localización Española para fOMODSIM.
 """
 
 STRINGS = {
@@ -23,7 +23,7 @@ STRINGS = {
         "filesDetected": "archivos detectados",
     },
     "header": {
-        "title": "Simulador de Instalador FOMOD",
+        "title": "fOMODSIM",
         "closeMod": "← Cerrar mod",
         "closeModTooltip": "Cerrar el mod actual y volver a la pantalla de inicio",
         "waitingArchive": "Skyrim SE/AE • Esperando archivo",
@@ -44,7 +44,7 @@ STRINGS = {
         "targetDownloads": "Descargas",
     },
     "welcome": {
-        "title": "Simulador de Instalador FOMOD",
+        "title": "fOMODSIM",
         "subtitle": "Abra o arrastre y suelte un archivo mod de Skyrim para explorar los pasos de instalación, probar las condiciones lógicas y simular la preparación sin modificar sus archivos de juego.",
         "dropTitle": "Arrastre y suelte su archivo aquí",
         "supportedFormats": 'Formatos compatibles: <span style="color:#38bdf8; font-weight:600; font-family:\'Menlo\',monospace;">.ZIP</span>, <span style="color:#38bdf8; font-weight:600; font-family:\'Menlo\',monospace;">.7Z</span>, <span style="color:#38bdf8; font-weight:600; font-family:\'Menlo\',monospace;">.RAR</span> o carpeta descomprimida',

@@ -1,4 +1,4 @@
-# FOMOD Simulator — Documentation (English)
+# fOMODSIM — Documentation (English)
 
 🇫🇷 [Version française](README.fr.md) · 🐧 [Linux port / Portage Linux](LINUX_PORT.md)
 
@@ -6,7 +6,7 @@
 
 ## 1. Overview
 
-**FOMOD Simulator** is a desktop application that opens a Skyrim mod archive containing a **FOMOD** installer (`fomod/ModuleConfig.xml`), lets you walk through its installation steps, tests its logical conditions, and then **generates the result ("staging") in a folder of your choice**, without ever touching your Skyrim installation.
+**fOMODSIM** is a desktop application that opens a Skyrim mod archive containing a **FOMOD** installer (`fomod/ModuleConfig.xml`), lets you walk through its installation steps, tests its logical conditions, and then **generates the result ("staging") in a folder of your choice**, without ever touching your Skyrim installation.
 
 Key features:
 
@@ -29,7 +29,7 @@ Key features:
 
 | Edition | Requirements |
 |---|---|
-| **macOS app** (`FOMOD Simulator.app`) | macOS on Apple Silicon (arm64). No Python needed. |
+| **macOS app** (`fOMODSIM.app`) | macOS on Apple Silicon (arm64). No Python needed. |
 | **Python (cross-platform)** | Python ≥ 3.9, `PyQt6 ≥ 6.4`, `py7zr ≥ 0.20` |
 | **`.rar` files** (optional) | `7-Zip`/`p7zip`, `unrar` or `bsdtar` installed (e.g. `brew install p7zip`) |
 
@@ -39,8 +39,8 @@ Skyrim does **not** need to be installed.
 
 ### macOS (compiled app)
 
-1. Unzip `FOMOD_Simulator_macOS_arm64.zip` (or use `FOMOD Simulator.app`).
-2. Drag `FOMOD Simulator.app` into `/Applications`.
+1. Unzip `fOMODSIM_macOS_arm64.zip` (or use `fOMODSIM.app`).
+2. Drag `fOMODSIM.app` into `/Applications`.
 3. First launch: the app is **ad-hoc signed** (not notarized). If macOS blocks it: **right-click → Open → Open**, or *System Settings → Privacy & Security → Open Anyway*.
 
 ### Python (macOS / Windows / Linux)
@@ -95,5 +95,5 @@ On the welcome screen choose your language (🇫🇷 🇬🇧 🇮🇹 🇪🇸)
 ## 7. Build it yourself (macOS)
 
 ```bash
-./build_app.sh     # produces ./FOMOD Simulator.app (ad-hoc signed, with icon)
+./build_app.sh     # produces ./fOMODSIM.app (ad-hoc signed, with icon)
 ```

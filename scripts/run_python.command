@@ -1,12 +1,12 @@
 #!/bin/bash
 # -------------------------------------------------------------
-# Lanceur macOS de la version Python (PyQt6) du Simulateur FOMOD
+# Lanceur macOS de la version Python (PyQt6) de fOMODSIM
 # -------------------------------------------------------------
 
 cd "$(dirname "$0")/.." || exit 1
 
 echo "========================================================"
-echo "    Démarrage du Simulateur FOMOD v1.0 (PyQt6 macOS)"
+echo "    Démarrage de fOMODSIM v1.0 (PyQt6 macOS)"
 echo "========================================================"
 
 # 1. Vérification de Python 3

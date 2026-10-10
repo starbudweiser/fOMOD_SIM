@@ -69,5 +69,5 @@ function serveFile(fileToServe, res) {
 }
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`[FOMOD Simulator v1.0] Serveur démarré : http://localhost:${PORT}`);
+  console.log(`[fOMODSIM v1.0] Serveur démarré : http://localhost:${PORT}`);
 });

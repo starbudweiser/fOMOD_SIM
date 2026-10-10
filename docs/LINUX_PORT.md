@@ -29,15 +29,15 @@ Paquets système éventuels pour Qt (Ubuntu/Debian) : `libxcb-cursor0 libxkbcomm
 
 ```bash
 pip install pyinstaller py7zr PyQt6
-pyinstaller --noconfirm --windowed --name FOMOD_Simulator \
+pyinstaller --noconfirm --windowed --name fOMODSIM \
   --add-data "assets/icon_1024.png:assets" python_app/main.py
 ```
 
-Résultat : `dist/FOMOD_Simulator/` (dossier distribuable). Adapter `packaging/FOMOD_Simulator.spec` en retirant le bloc `BUNDLE` (spécifique macOS).
+Résultat : `dist/fOMODSIM/` (dossier distribuable). Adapter `packaging/fOMODSIM.spec` en retirant le bloc `BUNDLE` (spécifique macOS).
 
 ### Option 3 — AppImage / Flatpak
 
-- **AppImage** : empaqueter `dist/FOMOD_Simulator/` avec `appimagetool` + fichier `.desktop` + `icon_1024.png`.
+- **AppImage** : empaqueter `dist/fOMODSIM/` avec `appimagetool` + fichier `.desktop` + `icon_1024.png`.
 - **Flatpak** : manifeste avec runtime `org.kde.Platform` + dépendances Python (`PyQt6`, `py7zr`).
 
 ### Points d'attention
@@ -55,9 +55,9 @@ Résultat : `dist/FOMOD_Simulator/` (dossier distribuable). Adapter `packaging/F
 ```ini
 [Desktop Entry]
 Type=Application
-Name=FOMOD Simulator
-Exec=/opt/fomod-simulator/FOMOD_Simulator %f
-Icon=/opt/fomod-simulator/assets/icon_1024.png
+Name=fOMODSIM
+Exec=/opt/fomodsim/fOMODSIM %f
+Icon=/opt/fomodsim/assets/icon_1024.png
 Categories=Utility;Game;
 MimeType=application/zip;application/x-7z-compressed;application/vnd.rar;
 ```
@@ -87,15 +87,15 @@ Run **on Linux** (PyInstaller cannot cross-compile):
 
 ```bash
 pip install pyinstaller py7zr PyQt6
-pyinstaller --noconfirm --windowed --name FOMOD_Simulator \
+pyinstaller --noconfirm --windowed --name fOMODSIM \
   --add-data "assets/icon_1024.png:assets" python_app/main.py
 ```
 
-Output: `dist/FOMOD_Simulator/` (distributable folder). If you reuse `packaging/FOMOD_Simulator.spec`, remove the `BUNDLE` block (macOS-only).
+Output: `dist/fOMODSIM/` (distributable folder). If you reuse `packaging/fOMODSIM.spec`, remove the `BUNDLE` block (macOS-only).
 
 ### Option 3 — AppImage / Flatpak
 
-- **AppImage**: package `dist/FOMOD_Simulator/` with `appimagetool` + a `.desktop` file + `icon_1024.png`.
+- **AppImage**: package `dist/fOMODSIM/` with `appimagetool` + a `.desktop` file + `icon_1024.png`.
 - **Flatpak**: manifest using the `org.kde.Platform` runtime + Python deps (`PyQt6`, `py7zr`).
 
 ### Caveats
@@ -113,9 +113,9 @@ Output: `dist/FOMOD_Simulator/` (distributable folder). If you reuse `packaging/
 ```ini
 [Desktop Entry]
 Type=Application
-Name=FOMOD Simulator
-Exec=/opt/fomod-simulator/FOMOD_Simulator %f
-Icon=/opt/fomod-simulator/assets/icon_1024.png
+Name=fOMODSIM
+Exec=/opt/fomodsim/fOMODSIM %f
+Icon=/opt/fomodsim/assets/icon_1024.png
 Categories=Utility;Game;
 MimeType=application/zip;application/x-7z-compressed;application/vnd.rar;
 ```

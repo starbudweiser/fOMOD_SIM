@@ -1,12 +1,12 @@
-# FOMOD Simulator
+# fOMODSIM
 
 Simulateur d'installation de mods FOMOD pour Skyrim (FR/EN/IT/ES).
 
 ## Structure du projet
 
 ```
-FOMOD_SIM/
-├── FOMOD Simulator.app     # application macOS compilée (générée par build_app.sh)
+fOMOD_SIM/
+├── fOMODSIM.app     # application macOS compilée (générée par build_app.sh)
 ├── build_app.sh            # compilation + signature + nettoyage
 ├── python_app/             # application Python (PyQt6) modulaire
 ├── web/                    # version web (React / Vite) : src, public, package.json…
@@ -21,7 +21,7 @@ FOMOD_SIM/
 
 ## Lancement
 
-- **Application macOS** : `FOMOD Simulator.app`
+- **Application macOS** : `fOMODSIM.app`
 - **Python (PyQt6)** : `python3 -m python_app.main` ou `./scripts/run_python.command`
 - **Web (React/Vite)** : `cd web && npm install && npm run dev` (ou `./scripts/run_web.command`)
 

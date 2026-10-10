@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-English localization for FOMOD Simulator.
+English localization for fOMODSIM.
 """
 
 STRINGS = {
@@ -23,7 +23,7 @@ STRINGS = {
         "filesDetected": "files detected",
     },
     "header": {
-        "title": "FOMOD Installer Simulator",
+        "title": "fOMODSIM",
         "closeMod": "← Close mod",
         "closeModTooltip": "Close current mod and return to welcome screen",
         "waitingArchive": "Skyrim SE/AE • Waiting for archive",
@@ -44,7 +44,7 @@ STRINGS = {
         "targetDownloads": "Downloads",
     },
     "welcome": {
-        "title": "FOMOD Installer Simulator",
+        "title": "fOMODSIM",
         "subtitle": "Open or drag-and-drop a Skyrim mod archive to explore installation steps, test logical conditions, and simulate staging without altering your game files.",
         "dropTitle": "Drag and drop your archive here",
         "supportedFormats": 'Supported formats: <span style="color:#38bdf8; font-weight:600; font-family:\'Menlo\',monospace;">.ZIP</span>, <span style="color:#38bdf8; font-weight:600; font-family:\'Menlo\',monospace;">.7Z</span>, <span style="color:#38bdf8; font-weight:600; font-family:\'Menlo\',monospace;">.RAR</span> or uncompressed folder',

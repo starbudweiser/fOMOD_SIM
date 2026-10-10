@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Gestionnaire d'Internationalisation (i18n) pour Simulateur FOMOD.
+Gestionnaire d'Internationalisation (i18n) pour fOMODSIM.
 Supporte Français ('fr'), Anglais ('en'), Italien ('it'), Espagnol ('es').
 """
 

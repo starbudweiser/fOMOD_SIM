@@ -9,7 +9,7 @@
 ## 🇫🇷 Français
 
 ### Titre
-**FOMOD Simulator — Prévisualisez et préparez vos installeurs FOMOD (macOS / Linux / Windows)**
+**fOMODSIM — Prévisualisez et préparez vos installeurs FOMOD (macOS / Linux / Windows)**
 
 ### Résumé court (≈ 350 caractères max)
 Ouvrez n'importe quel mod Skyrim avec un installeur FOMOD, parcourez ses étapes, testez les conditions, puis générez le résultat dans un dossier — sans installer Skyrim ni gestionnaire de mods. Interface en français, anglais, italien et espagnol.
@@ -18,9 +18,9 @@ Ouvrez n'importe quel mod Skyrim avec un installeur FOMOD, parcourez ses étapes
 
 ![Accueil](images/01_welcome_fr.png)
 
-# 📦 FOMOD Simulator
+# 📦 fOMODSIM
 
-**FOMOD Simulator** est une application de bureau qui exécute l'installeur FOMOD d'un mod Skyrim **sans toucher à votre jeu**. Vous choisissez vos options, vous voyez exactement ce qui sera installé, puis vous exportez les fichiers dans un dossier de « staging ».
+**fOMODSIM** est une application de bureau qui exécute l'installeur FOMOD d'un mod Skyrim **sans toucher à votre jeu**. Vous choisissez vos options, vous voyez exactement ce qui sera installé, puis vous exportez les fichiers dans un dossier de « staging ».
 
 Pensé pour les joueurs sous **macOS et Linux**, où Mod Organizer 2 et Vortex ne sont pas disponibles, mais utile aussi sous Windows pour **inspecter un FOMOD avant de l'installer**.
 
@@ -43,7 +43,7 @@ Pensé pour les joueurs sous **macOS et Linux**, où Mod Organizer 2 et Vortex n
 
 ## 🚀 Mode d'emploi
 
-1. Lancez **FOMOD Simulator** et choisissez votre langue.
+1. Lancez **fOMODSIM** et choisissez votre langue.
 2. Glissez-déposez l'archive du mod (ou **Charger un dossier décompressé**).
 3. Parcourez les étapes avec **Continuer / Retour** ; cliquez sur une option pour voir sa description.
 4. Cliquez sur **Destination du Staging…** puis **GÉNÉRER LE STAGING**.
@@ -61,7 +61,7 @@ Skyrim **n'a pas besoin** d'être installé.
 
 ## ⬇️ Installation
 
-- **macOS** : décompressez, glissez `FOMOD Simulator.app` dans `/Applications`. Application signée ad hoc : au premier lancement, **clic droit → Ouvrir**.
+- **macOS** : décompressez, glissez `fOMODSIM.app` dans `/Applications`. Application signée ad hoc : au premier lancement, **clic droit → Ouvrir**.
 - **Python** : `pip install PyQt6 py7zr` puis `python3 -m python_app.main`.
 
 ## ⚠️ À savoir
@@ -89,7 +89,7 @@ Développé par Skyrim Tools. Mod de démonstration fictif basé sur la structur
 ## 🇬🇧 English
 
 ### Title
-**FOMOD Simulator — Preview and prepare FOMOD installers (macOS / Linux / Windows)**
+**fOMODSIM — Preview and prepare FOMOD installers (macOS / Linux / Windows)**
 
 ### Short summary (≈ 350 chars max)
 Open any Skyrim mod with a FOMOD installer, walk through its steps, test its conditions, then export the result to a folder — no Skyrim install or mod manager needed. UI in English, French, Italian and Spanish.
@@ -98,9 +98,9 @@ Open any Skyrim mod with a FOMOD installer, walk through its steps, test its con
 
 ![Welcome](images/01_welcome_en.png)
 
-# 📦 FOMOD Simulator
+# 📦 fOMODSIM
 
-**FOMOD Simulator** is a desktop app that runs a Skyrim mod's FOMOD installer **without touching your game**. Pick your options, see exactly what would be installed, then export the files to a "staging" folder.
+**fOMODSIM** is a desktop app that runs a Skyrim mod's FOMOD installer **without touching your game**. Pick your options, see exactly what would be installed, then export the files to a "staging" folder.
 
 Built for **macOS and Linux** players, where Mod Organizer 2 and Vortex are unavailable, and also handy on Windows to **inspect a FOMOD before installing it**.
 
@@ -123,7 +123,7 @@ Built for **macOS and Linux** players, where Mod Organizer 2 and Vortex are unav
 
 ## 🚀 How to use
 
-1. Launch **FOMOD Simulator** and pick your language.
+1. Launch **fOMODSIM** and pick your language.
 2. Drag & drop the mod archive (or **Load an unpacked folder**).
 3. Move through steps with **Continue / Back**; click an option to read its description.
 4. Click **Staging destination…** then **GENERATE STAGING**.
@@ -141,7 +141,7 @@ Skyrim does **not** need to be installed.
 
 ## ⬇️ Installation
 
-- **macOS**: unzip, drag `FOMOD Simulator.app` into `/Applications`. Ad-hoc signed app: on first launch, **right-click → Open**.
+- **macOS**: unzip, drag `fOMODSIM.app` into `/Applications`. Ad-hoc signed app: on first launch, **right-click → Open**.
 - **Python**: `pip install PyQt6 py7zr` then `python3 -m python_app.main`.
 
 ## ⚠️ Good to know
