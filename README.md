@@ -10,6 +10,7 @@ FOMOD_SIM/
 ├── build_app.sh            # compilation + signature + nettoyage
 ├── python_app/             # application Python (PyQt6) modulaire
 ├── web/                    # version web (React / Vite) : src, public, package.json…
+├── dist/                   # build web (généré par npm run build, non versionné)
 ├── packaging/              # spec PyInstaller
 ├── scripts/                # lanceurs .command (Python, Web)
 ├── assets/                 # icônes (icon.icns, icon_1024.png)

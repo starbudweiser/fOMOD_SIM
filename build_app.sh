@@ -20,7 +20,7 @@ cd "$ROOT"
 TMP_DIR="$(mktemp -d "$ROOT/.build_tmp.XXXXXX")"
 
 cleanup() {
-    rm -rf "$TMP_DIR" "$ROOT/build" "$ROOT/.pyinstaller_cache" "$ROOT/dist" "$ROOT"/*.egg-info
+    rm -rf "$TMP_DIR" "$ROOT/build" "$ROOT/.pyinstaller_cache" "$ROOT"/*.egg-info
     find "$ROOT" \( -path "$ROOT/.venv" -o -path "$ROOT/web/node_modules" -o -path "$ROOT/.git" \) -prune -o \
         \( -name "__pycache__" -type d -o -name ".DS_Store" -type f \) -print0 2>/dev/null \
         | xargs -0 rm -rf 2>/dev/null || true
