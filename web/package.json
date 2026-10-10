@@ -22,7 +22,6 @@
     "vite": "^8.3.0"
   },
   "devDependencies": {
-    "@types/jszip": "^3.4.1",
     "@types/node": "^22.14.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",

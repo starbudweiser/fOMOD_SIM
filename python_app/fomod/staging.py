@@ -3,7 +3,7 @@ import re
 import shutil
 import zipfile
 import logging
-from typing import List, Dict, Tuple, Optional, Set
+from typing import List, Dict, Optional, Set
 from .types import (
     ArchiveIndex,
     FomodOption,

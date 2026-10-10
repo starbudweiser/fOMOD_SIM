@@ -9,7 +9,7 @@
 
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_NAME="FOMOD Simulator.app"
 SPEC="$ROOT/packaging/FOMOD_Simulator.spec"
 TARGET="$ROOT/$APP_NAME"

@@ -1,6 +1,0 @@
-{
-  "name": "Simulateur FOMOD (générique)",
-  "description": "Simulateur et gestionnaire d'installation de mods FOMOD pour Skyrim avec pré-sélection intelligente, staging et aperçu en temps réel.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

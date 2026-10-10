@@ -96,5 +96,5 @@ Sur l'écran d'accueil, choisissez la langue (🇫🇷 🇬🇧 🇮🇹 🇪�
 ## 7. Compiler soi-même (macOS)
 
 ```bash
-./scripts/build_app.sh     # génère ./FOMOD Simulator.app (signé ad hoc, avec icône)
+./build_app.sh     # génère ./FOMOD Simulator.app (signé ad hoc, avec icône)
 ```

@@ -1,5 +1,5 @@
 import logging
-from typing import List, Dict, Optional, Tuple, Set
+from typing import List, Dict, Optional, Set
 from PyQt6.QtCore import QThread, pyqtSignal
 from ..fomod.types import (
     ArchiveIndex,

@@ -6,12 +6,13 @@ Simulateur d'installation de mods FOMOD pour Skyrim (FR/EN/IT/ES).
 
 ```
 FOMOD_SIM/
-├── FOMOD Simulator.app     # application macOS compilée (générée par scripts/build_app.sh)
+├── FOMOD Simulator.app     # application macOS compilée (générée par build_app.sh)
+├── build_app.sh            # compilation + signature + nettoyage
 ├── python_app/             # application Python (PyQt6) modulaire
 ├── standalone/             # version Python tout-en-un (fomod_simulator.py)
 ├── web/                    # version web (React / Vite) : src, public, package.json…
 ├── packaging/              # spec PyInstaller
-├── scripts/                # build_app.sh, archive_reference.py, lanceurs .command
+├── scripts/                # lanceurs .command (Python, Web)
 ├── assets/                 # icônes (icon.icns, icon_1024.png)
 ├── tests/                  # tests unitaires Python
 ├── docs/                   # documentation FR/EN, fiche Nexus, captures
@@ -28,8 +29,7 @@ FOMOD_SIM/
 
 ## Build
 
-- Application macOS signée (générée à la racine, temporaires supprimés) : `./scripts/build_app.sh`
-- Archive de référence : `python3 scripts/archive_reference.py`
+- Application macOS signée (générée à la racine, temporaires supprimés) : `./build_app.sh`
 
 ## Tests
 

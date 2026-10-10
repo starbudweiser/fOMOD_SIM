@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useI18n, Language } from '../locales';
+import { useI18n } from '../locales';
 
 interface LanguageSelectorProps {
   variant?: 'dropdown' | 'pills';

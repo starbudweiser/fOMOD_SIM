@@ -96,5 +96,5 @@ On the welcome screen choose your language (🇫🇷 🇬🇧 🇮🇹 🇪🇸)
 ## 7. Build it yourself (macOS)
 
 ```bash
-./scripts/build_app.sh     # produces ./FOMOD Simulator.app (ad-hoc signed, with icon)
+./build_app.sh     # produces ./FOMOD Simulator.app (ad-hoc signed, with icon)
 ```

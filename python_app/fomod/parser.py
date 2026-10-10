@@ -1,7 +1,7 @@
 import re
 import logging
 import xml.etree.ElementTree as ET
-from typing import List, Dict, Optional, Set, Tuple, Any
+from typing import List, Dict, Optional, Set, Tuple
 from .types import (
     FomodStep,
     FomodGroup,
