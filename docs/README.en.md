@@ -48,7 +48,7 @@ Skyrim does **not** need to be installed.
 ```bash
 pip install -r python_app/requirements.txt
 python3 -m python_app.main          # modular version
-python3 fomod_simulator.py          # standalone script
+python3 standalone/fomod_simulator.py          # standalone script
 ```
 
 ## 5. User guide
@@ -96,5 +96,5 @@ On the welcome screen choose your language (🇫🇷 🇬🇧 🇮🇹 🇪🇸)
 ## 7. Build it yourself (macOS)
 
 ```bash
-./build_macos.sh     # produces dist/FOMOD Simulator.app (ad-hoc signed, with icon)
+./scripts/build_app.sh     # produces ./FOMOD Simulator.app (ad-hoc signed, with icon)
 ```

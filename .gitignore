@@ -13,3 +13,4 @@ ___ARCHIVES/
 /FOMOD Simulator.app/
 Icon?
 .env*
+.build_tmp.*/

@@ -35,7 +35,7 @@ pyinstaller --noconfirm --windowed --name FOMOD_Simulator \
   --add-data "assets/icon_1024.png:assets" python_app/main.py
 ```
 
-Résultat : `dist/FOMOD_Simulator/` (dossier distribuable). Adapter `FOMOD_Simulator.spec` en retirant le bloc `BUNDLE` (spécifique macOS).
+Résultat : `dist/FOMOD_Simulator/` (dossier distribuable). Adapter `packaging/FOMOD_Simulator.spec` en retirant le bloc `BUNDLE` (spécifique macOS).
 
 ### Option 3 — AppImage / Flatpak
 
@@ -95,7 +95,7 @@ pyinstaller --noconfirm --windowed --name FOMOD_Simulator \
   --add-data "assets/icon_1024.png:assets" python_app/main.py
 ```
 
-Output: `dist/FOMOD_Simulator/` (distributable folder). If you reuse `FOMOD_Simulator.spec`, remove the `BUNDLE` block (macOS-only).
+Output: `dist/FOMOD_Simulator/` (distributable folder). If you reuse `packaging/FOMOD_Simulator.spec`, remove the `BUNDLE` block (macOS-only).
 
 ### Option 3 — AppImage / Flatpak
 

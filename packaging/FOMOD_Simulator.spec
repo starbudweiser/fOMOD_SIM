@@ -1,20 +1,22 @@
 # -*- mode: python ; coding: utf-8 -*-
-import sys
+# Spec PyInstaller — FOMOD Simulator (macOS .app)
+# Utilisé par scripts/build_app.sh (chemins résolus depuis la racine du projet).
 import os
 
 block_cipher = None
 
-# Chemins absolus
-project_dir = os.path.abspath(os.path.dirname('__file__'))
-icon_path = os.path.join(project_dir, 'assets', 'icon.icns')
+# SPECPATH est injecté par PyInstaller (dossier contenant ce .spec : packaging/)
+project_dir = os.path.abspath(os.path.join(SPECPATH, '..'))
+assets_dir = os.path.join(project_dir, 'assets')
+icon_path = os.path.join(assets_dir, 'icon.icns')
 
 a = Analysis(
-    ['python_app/main.py'],
+    [os.path.join(project_dir, 'python_app', 'main.py')],
     pathex=[project_dir, os.path.join(project_dir, 'python_app')],
     binaries=[],
     datas=[
-        ('assets/icon.icns', 'assets'),
-        ('assets/icon_1024.png', 'assets'),
+        (icon_path, 'assets'),
+        (os.path.join(assets_dir, 'icon_1024.png'), 'assets'),
     ],
     hiddenimports=[
         'py7zr',
@@ -87,7 +89,7 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name='FOMOD Simulator.app',
-    icon='assets/icon.icns',
+    icon=icon_path,
     bundle_identifier='com.skyrimtools.fomodsimulator',
     info_plist={
         'CFBundleName': 'FOMOD Simulator',

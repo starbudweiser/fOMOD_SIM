@@ -1,9 +1,9 @@
 #!/bin/bash
 # -------------------------------------------------------------
-# Lanceur autonome macOS pour le Simulateur FOMOD v1.0 (PyQt6)
+# Lanceur macOS de la version Python (PyQt6) du Simulateur FOMOD
 # -------------------------------------------------------------
 
-cd "$(dirname "$0")" || exit 1
+cd "$(dirname "$0")/.." || exit 1
 
 echo "========================================================"
 echo "    Démarrage du Simulateur FOMOD v1.0 (PyQt6 macOS)"
@@ -18,13 +18,13 @@ if ! command -v python3 &> /dev/null; then
     exit 1
 fi
 
-# 2. Environnement virtuel optionnel ou installation des dépendances
-if [ ! -d "venv" ]; then
+# 2. Environnement virtuel et dépendances
+if [ ! -d ".venv" ]; then
     echo "[1/3] Création de l'environnement virtuel Python..."
-    python3 -m venv venv
+    python3 -m venv .venv
 fi
 
-source venv/bin/activate
+source .venv/bin/activate
 
 echo "[2/3] Vérification des dépendances PyQt6..."
 pip install -q -r python_app/requirements.txt

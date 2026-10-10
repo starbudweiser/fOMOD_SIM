@@ -10,7 +10,8 @@ import hashlib
 import zipfile
 import datetime
 
-PROJECT_DIR = os.path.abspath(os.path.dirname(__file__))
+PROJECT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+STANDALONE = os.path.join(PROJECT_DIR, "standalone", "fomod_simulator.py")
 ARCHIVE_BASE = os.path.join(
     PROJECT_DIR,
     "_ARCHIVES" if os.path.isdir(os.path.join(PROJECT_DIR, "_ARCHIVES")) else "___ARCHIVES",
@@ -54,9 +55,8 @@ def main():
     if not os.path.exists(pyz_dest):
         import tempfile
         import zipapp
-        standalone_src = "fomod_simulator.py" if os.path.exists(os.path.join(PROJECT_DIR, "fomod_simulator.py")) else "fomod_simulator_standalone.py"
         with tempfile.TemporaryDirectory() as tmpdir:
-            with open(os.path.join(PROJECT_DIR, standalone_src), "r", encoding="utf-8") as sf:
+            with open(STANDALONE, "r", encoding="utf-8") as sf:
                 with open(os.path.join(tmpdir, "__main__.py"), "w", encoding="utf-8") as df:
                     df.write(sf.read())
             zipapp.create_archive(tmpdir, pyz_dest, interpreter="/usr/bin/env python3", compressed=True)
@@ -77,7 +77,6 @@ def main():
     zip_dest = os.path.join(REF_DIR, "FOMOD_Simulator_Multiplatform.zip")
     for cand in [
         os.path.join(PROJECT_DIR, "dist", "downloads", "FOMOD_Simulator_Multiplatform.zip"),
-        os.path.join(PROJECT_DIR, "public", "downloads", "FOMOD_Simulator_Multiplatform.zip"),
         os.path.join(PROJECT_DIR, "dist", "FOMOD_Simulator_Multiplatform.zip"),
         zip_dest,
     ]:
@@ -86,12 +85,7 @@ def main():
             break
 
     # 2.4 Standalone Python script
-    standalone_src = (
-        "fomod_simulator.py"
-        if os.path.exists(os.path.join(PROJECT_DIR, "fomod_simulator.py"))
-        else "fomod_simulator_standalone.py"
-    )
-    shutil.copy(os.path.join(PROJECT_DIR, standalone_src), os.path.join(REF_DIR, "fomod_simulator.py"))
+    shutil.copy(STANDALONE, os.path.join(REF_DIR, "fomod_simulator.py"))
     print("✅ Livrables Python (pyz, whl, zip, standalone) synchronisés.")
 
     # 3. Copie des assets
