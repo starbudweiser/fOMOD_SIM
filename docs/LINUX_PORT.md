@@ -21,8 +21,6 @@ pip install -r python_app/requirements.txt
 python3 -m python_app.main
 ```
 
-Alternative : l'archive `FOMOD_Simulator_Multiplatform.zip` contient `run_linux.sh` (lance `fomod_simulator.pyz`).
-
 Paquets système éventuels pour Qt (Ubuntu/Debian) : `libxcb-cursor0 libxkbcommon-x11-0 libegl1`.
 
 ### Option 2 — Binaire autonome (PyInstaller)
@@ -80,8 +78,6 @@ python3 -m venv venv && . venv/bin/activate
 pip install -r python_app/requirements.txt
 python3 -m python_app.main
 ```
-
-Alternative: `FOMOD_Simulator_Multiplatform.zip` ships `run_linux.sh` (runs `fomod_simulator.pyz`).
 
 Possible Qt system packages (Ubuntu/Debian): `libxcb-cursor0 libxkbcommon-x11-0 libegl1`.
 

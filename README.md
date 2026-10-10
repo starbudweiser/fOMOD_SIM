@@ -9,14 +9,12 @@ FOMOD_SIM/
 ├── FOMOD Simulator.app     # application macOS compilée (générée par build_app.sh)
 ├── build_app.sh            # compilation + signature + nettoyage
 ├── python_app/             # application Python (PyQt6) modulaire
-├── standalone/             # version Python tout-en-un (fomod_simulator.py)
 ├── web/                    # version web (React / Vite) : src, public, package.json…
 ├── packaging/              # spec PyInstaller
 ├── scripts/                # lanceurs .command (Python, Web)
 ├── assets/                 # icônes (icon.icns, icon_1024.png)
 ├── tests/                  # tests unitaires Python
 ├── docs/                   # documentation FR/EN, fiche Nexus, captures
-├── setup.py                # packaging pip (wheel)
 └── _ARCHIVES/              # versions de référence (non versionné)
 ```
 
@@ -24,7 +22,6 @@ FOMOD_SIM/
 
 - **Application macOS** : `FOMOD Simulator.app`
 - **Python (PyQt6)** : `python3 -m python_app.main` ou `./scripts/run_python.command`
-- **Script autonome** : `python3 standalone/fomod_simulator.py`
 - **Web (React/Vite)** : `cd web && npm install && npm run dev` (ou `./scripts/run_web.command`)
 
 ## Build

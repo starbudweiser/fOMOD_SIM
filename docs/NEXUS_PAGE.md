@@ -62,7 +62,7 @@ Skyrim **n'a pas besoin** d'être installé.
 ## ⬇️ Installation
 
 - **macOS** : décompressez, glissez `FOMOD Simulator.app` dans `/Applications`. Application signée ad hoc : au premier lancement, **clic droit → Ouvrir**.
-- **Python** : `pip install PyQt6 py7zr` puis `python3 standalone/fomod_simulator.py`.
+- **Python** : `pip install PyQt6 py7zr` puis `python3 -m python_app.main`.
 
 ## ⚠️ À savoir
 
@@ -142,7 +142,7 @@ Skyrim does **not** need to be installed.
 ## ⬇️ Installation
 
 - **macOS**: unzip, drag `FOMOD Simulator.app` into `/Applications`. Ad-hoc signed app: on first launch, **right-click → Open**.
-- **Python**: `pip install PyQt6 py7zr` then `python3 standalone/fomod_simulator.py`.
+- **Python**: `pip install PyQt6 py7zr` then `python3 -m python_app.main`.
 
 ## ⚠️ Good to know
 

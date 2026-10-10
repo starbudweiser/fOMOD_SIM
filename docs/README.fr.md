@@ -47,8 +47,7 @@ Skyrim n'a **pas** besoin d'être installé.
 
 ```bash
 pip install -r python_app/requirements.txt
-python3 -m python_app.main          # version modulaire
-python3 standalone/fomod_simulator.py          # script autonome
+python3 -m python_app.main
 ```
 
 ## 5. Mode d'emploi
