@@ -13,7 +13,7 @@ Toute évolution d'interface ou de moteur se fait **dans les deux versions** sau
 ```bash
 python3 -m unittest discover tests        # tests Python (moteur + GUI hors écran)
 python3 -m python_app.main                # lancer la version desktop
-./build_app.sh                            # compile, signe ad hoc et place l'app à la racine
+./build_app.sh                            # compile, signe (certificat local) et place l'app à la racine
 cd web && npm run dev                     # web sur http://localhost:3000
 cd web && npm run lint                    # tsc --noEmit
 cd web && npm run build                   # sortie dans ../dist (racine du projet)
@@ -45,11 +45,13 @@ cd web && npm run build                   # sortie dans ../dist (racine du proje
 
 - **Parsing FOMOD** : les namespaces XML (`xmlns="…ModConfig5.0.xsd"`) sont retirés de tous les tags avant les recherches. Les images d'options sont cherchées dans de nombreux attributs (`image`, `path`, `file`, `src`…) et sous-balises (`image`, `previewImage`, `headerImage`), sans tenir compte de la casse.
 - **Résolution des chemins** : `reanchor_index` réaligne la racine quand `fomod/ModuleConfig.xml` est dans un sous-dossier de l'archive. `find_file_in_index` essaie plusieurs variantes (préfixes `fomod/` et `images/`, suffixe, basename) ; `ArchiveIndex.basename_map` rend la recherche en O(1).
+- **Choix de ModuleConfig.xml / info.xml** : `select_fomod_xml` (Python) et `selectFomodXml` (web) privilégient le fichier rangé dans un dossier `fomod/`, puis le moins profond. Les extracteurs ne lisent plus ces XML au fil de l'eau : ils passent tous par cette sélection après le réancrage.
+- **Archives 7z** : `py7zr` ≥ 1.0 a supprimé `SevenZipFile.read()`. `_read_7z_members` utilise `extract(factory=BytesIOFactory(...))`, avec repli sur `read()` pour les anciennes versions. Une erreur à cet endroit faisait passer toutes les archives 7z pour « sans ModuleConfig.xml ».
 - **Images DDS/TGA** : `QPixmap` ne les lit pas ; repli sur Pillow → RGBA → `QPixmap`.
 - **Scan du dossier Data** : seuls `.esp`, `.esm`, `.esl`, `.dll`, `.bsa`, `.ba2` comptent pour la détection des dépendances (badge « Auto »).
 - **Threads** : ne pas utiliser `QThread.terminate()` (interblocages GIL qui figeaient les tests).
 - **Polices Qt** : police système `.AppleSystemUIFont` et `'Menlo', monospace` pour éviter les avertissements `qt.qpa.fonts` et ~1,5 s de blocage au démarrage.
-- **Signature** : ad hoc uniquement, pas de notarisation. Sur un autre Mac : clic droit → Ouvrir. `build_app.sh` retire les attributs étendus (`xattr`) avant de signer.
+- **Signature** : `build_app.sh` appelle `../_tools/sign_app.sh` (certificat local stable « sKYCRASH Local Signing », jamais ad hoc, sinon macOS redemande les autorisations à chaque build). Pas de notarisation : sur un autre Mac, clic droit → Ouvrir.
 
 ## Historique (repris d'Antigravity, sept.–oct. 2026)
 
@@ -58,7 +60,7 @@ cd web && npm run build                   # sortie dans ../dist (racine du proje
 - Suppression systématique des contours dans le thème Qt (« borderless »), fond de l'aperçu de droite retiré.
 - Correction d'un crash `SIGABRT` à la génération du staging (`VirtualFileEntry.is_dir` manquant).
 - Internationalisation FR/EN/IT/ES des deux versions ; sélecteur de langue en pastilles compactes centrées sur l'accueil, sans icône ni libellé.
-- Icône : colis isométrique flat design sur fond transparent (`assets/icon_1024.png`, `assets/icon.icns`).
+- Icône : colis isométrique flat design sur fond transparent (`assets/icon.png`, `assets/icon.icns`).
 - v1.0.0 archivée et taguée ; puis audits, suppression du code mort (`standalone/`, `setup.py`, scripts ponctuels, dépendances npm inutilisées), réorganisation en dossiers, docs FR/EN et fiche Nexus.
 
 ## Pistes ouvertes
