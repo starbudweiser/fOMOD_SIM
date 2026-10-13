@@ -1,4 +1,5 @@
 import os
+import shutil
 import sys
 import logging
 from typing import List, Dict, Optional, Set
@@ -42,6 +43,7 @@ from ..fomod.parser import (
     option_matches_installed,
 )
 from ..fomod.plugins import annotate_option_masters
+from ..fomod.staging import staging_folder_name
 from ..fomod.demo_mod import get_demo_mod
 from ..fomod.session import InstallSession
 from .workers import ArchiveExtractWorker, StagingWorker, PreviewLoadWorker, StagingExportWorker
@@ -431,6 +433,7 @@ class MainWindow(QMainWindow):
         self.data_dir_path: Optional[str] = None
         self.staging_dir_path: str = "Bureau (Desktop)"
         self.staging_dir_chosen: bool = False  # vrai une fois un dossier choisi par l'utilisateur
+        self.mod_source_path: Optional[str] = None  # archive ou dossier du mod ouvert (nom du sous-dossier de staging)
 
         # Tree widget invisible maintenu pour rétro-compatibilité
         self.staging_tree = QTreeWidget()
@@ -1342,6 +1345,7 @@ class MainWindow(QMainWindow):
         logger.info("Chargement du mod démo : %s", _mod_id)
         try:
             index, cfg_xml, info_xml = get_demo_mod()
+            self.mod_source_path = None
             self.archive_index = index
             self.metadata = parse_info_xml(info_xml)
             mod_name, steps, req_files, cond_installs = parse_module_config_xml(cfg_xml)
@@ -1594,20 +1598,49 @@ class MainWindow(QMainWindow):
             res = self.session.build_staging(self.archive_index)
             self.current_staging_result = res
 
+            # Un sous-dossier par mod, pour préparer plusieurs mods dans le même dossier de staging
+            target = os.path.join(
+                self.staging_dir_path, staging_folder_name(self.mod_source_path, self.metadata.name)
+            )
+            if not self._confirm_replace_staging(target):
+                return
+
             self.loading_overlay.set_status(self.i18n.get("stagingExport", "writing"))
             self.loading_overlay.resize(self.size())
             self.loading_overlay.show()
             self.loading_overlay.raise_()
-            self._export_worker = StagingExportWorker(res, self.staging_dir_path, self.archive_index)
+            self._export_worker = StagingExportWorker(res, target, self.archive_index)
             self._export_worker.progress.connect(self.loading_overlay.set_status)
-            self._export_worker.finished.connect(lambda failures, r=res: self._on_staging_written(r, failures))
+            self._export_worker.finished.connect(lambda failures, r=res, t=target: self._on_staging_written(r, failures, t))
             self._export_worker.error.connect(self._on_staging_write_error)
             self._export_worker.start()
         except Exception as e:
             logger.exception("Erreur génération staging")
             QMessageBox.critical(self, "Erreur Staging", f"Une erreur est survenue lors de la génération du staging :\n{e}")
 
-    def _on_staging_written(self, res: StagingResult, failures: list):
+    def _confirm_replace_staging(self, target: str) -> bool:
+        """Dossier du mod déjà présent et non vide : remplacer son contenu après confirmation
+        (sinon des fichiers d'options décochées depuis resteraient)."""
+        if not os.path.isdir(target) or not os.listdir(target):
+            return True
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Question)
+        box.setText(self.i18n.get("stagingExport", "existsTitle").format(name=os.path.basename(target)))
+        box.setInformativeText(self.i18n.get("stagingExport", "existsMessage"))
+        replace = box.addButton(self.i18n.get("stagingExport", "replace"), QMessageBox.ButtonRole.DestructiveRole)
+        cancel = box.addButton(self.i18n.get("stagingWarning", "cancel"), QMessageBox.ButtonRole.RejectRole)
+        box.setDefaultButton(cancel)
+        box.exec()
+        if box.clickedButton() is not replace:
+            return False
+        try:
+            shutil.rmtree(target)
+        except OSError as e:
+            QMessageBox.critical(self, "Erreur Staging", f"Impossible de vider {target} :\n{e}")
+            return False
+        return True
+
+    def _on_staging_written(self, res: StagingResult, failures: list, target: str):
         self.loading_overlay.hide()
         if failures:
             box = QMessageBox(self)
@@ -1616,7 +1649,7 @@ class MainWindow(QMainWindow):
             box.setInformativeText(self.i18n.get("stagingExport", "failedMessage"))
             box.setDetailedText("\n".join(failures))
             box.exec()
-        modal = StagingResultModal(res, self.staging_dir_path, self, archive_index=self.archive_index)
+        modal = StagingResultModal(res, target, self, archive_index=self.archive_index)
         modal.exec()
 
     def _on_staging_write_error(self, err: str):
@@ -1706,6 +1739,7 @@ class MainWindow(QMainWindow):
             self._load_archive(folder)
 
     def _load_archive(self, file_path: str):
+        self.mod_source_path = file_path
         if self._extract_worker and self._extract_worker.isRunning():
             try:
                 self._extract_worker.finished.disconnect()

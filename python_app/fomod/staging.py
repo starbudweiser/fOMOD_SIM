@@ -238,6 +238,58 @@ def build_staging(
     )
 
 
+# Noms d'archives Nexus (téléchargement manuel, Vortex, collections), suffixes à retirer :
+# récent :      « <nom> <id> <version> 2026-09-15T13-16Z <code> »
+_NEXUS_NEW = re.compile(r"\s+\d{2,7}\s+\S+\s+\d{4}-\d{2}-\d{2}T\d{2}-\d{2}Z(?:\s+[0-9A-Za-z_-]+)?$")
+# ancien :      « <nom>-<id>-<version…>[-<horodatage>] »
+_NEXUS_OLD = re.compile(r"-\d{3,7}(?:-[0-9A-Za-z.]+){1,6}$")
+# collections : « <nom_avec_tirets_bas>_<version>_<code de 9 caractères> »
+_NEXUS_UNDERSCORE = re.compile(r"(?:_[0-9][0-9.]*)*_[0-9A-Za-z]{9}$")
+# tronqué :     « <nom>-<id>- »
+_NEXUS_TRUNCATED = re.compile(r"-\d{3,7}-$")
+# copie du navigateur : « … (1) »
+_DUPLICATE_MARK = re.compile(r"\s*\(\d{1,2}\)$")
+_FORBIDDEN_CHARS = re.compile(r'[/\\:*?"<>|\x00-\x1f]+')
+ARCHIVE_EXTS = (".tar.gz", ".tar.bz2", ".zip", ".7z", ".rar", ".tar", ".tgz", ".gz", ".bz2")
+
+
+def clean_archive_name(base: str) -> str:
+    """Nom lisible d'une archive de mod (sans extension) : retire l'identifiant, la version,
+    l'horodatage et le code ajoutés par Nexus, ainsi que la marque de copie « (1) »."""
+    for candidate in (base, _DUPLICATE_MARK.sub("", base)):
+        if _NEXUS_NEW.search(candidate):
+            return _NEXUS_NEW.sub("", candidate)
+        if _NEXUS_OLD.search(candidate):
+            return _NEXUS_OLD.sub("", candidate)
+        if " " not in candidate and "_" in candidate and _NEXUS_UNDERSCORE.search(candidate):
+            stripped = _NEXUS_UNDERSCORE.sub("", candidate)
+            if stripped:
+                return stripped.replace("_", " ")
+        if _NEXUS_TRUNCATED.search(candidate):
+            return _NEXUS_TRUNCATED.sub("", candidate)
+    return base
+
+
+def staging_folder_name(source_path: Optional[str], mod_name: str = "") -> str:
+    """Nom du dossier de staging d'un mod : nom de l'archive (ou du dossier) nettoyé des ajouts
+    de Nexus, sinon nom du mod, en majuscules. Deux variantes d'un même mod (16-9 / 16-10…) ont
+    souvent le même nom de mod, mais des archives distinctes."""
+    name = ""
+    if source_path:
+        base = os.path.basename(os.path.normpath(source_path))
+        if os.path.isdir(source_path):
+            name = base
+        else:
+            for ext in ARCHIVE_EXTS:
+                if base.lower().endswith(ext):
+                    base = base[: -len(ext)]
+                    break
+            name = clean_archive_name(base) or base
+    name = _FORBIDDEN_CHARS.sub("-", name or mod_name or "Mod FOMOD")
+    name = re.sub(r"\s{2,}", " ", name).strip(" .-_")
+    return (name or "Mod FOMOD").upper()
+
+
 def export_staging_to_directory(
     staging_result: StagingResult,
     target_dir: str,

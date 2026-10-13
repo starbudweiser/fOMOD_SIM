@@ -79,6 +79,9 @@ export const en: Translations = {
     cancel: "Cancel",
   },
   stagingExport: {
+    existsTitle: "The folder “{name}” already exists",
+    existsMessage: "Its content will be replaced by the new staging (files from a previous staging will be deleted).",
+    replace: "Replace",
     failedTitle: "{count} file(s) could not be written",
     failedMessage: "Their content could not be read from the archive: they were not created.",
   },

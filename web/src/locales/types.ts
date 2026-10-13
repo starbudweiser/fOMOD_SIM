@@ -77,6 +77,9 @@ export interface Translations {
     cancel: string;
   };
   stagingExport: {
+    existsTitle: string;
+    existsMessage: string;
+    replace: string;
     failedTitle: string;
     failedMessage: string;
   };

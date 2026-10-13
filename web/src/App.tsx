@@ -37,6 +37,8 @@ import {
   buildStaging,
   writeStagingToLocalDirectoryHandle,
   formatExportFailures,
+  prepareModDirectory,
+  stagingFolderName,
 } from './utils/fomodStaging';
 import {
   SAMPLE_MOD_CBBE,
@@ -109,6 +111,9 @@ export default function App() {
   const [stagingModalOpen, setStagingModalOpen] = useState<boolean>(false);
   const [folderSelectModalOpen, setFolderSelectModalOpen] = useState<boolean>(false);
   const [stagingWarningOpen, setStagingWarningOpen] = useState<boolean>(false);
+  // Archive ou dossier du mod ouvert : nom du sous-dossier de staging
+  const [stagingTargetDisplay, setStagingTargetDisplay] = useState<string>('');
+  const [modSource, setModSource] = useState<{ name: string; isArchive: boolean } | null>(null);
 
   // Mod info modal & open mod modal
   const [infoModalOpen, setInfoModalOpen] = useState<boolean>(false);
@@ -225,6 +230,7 @@ export default function App() {
 
   // --- CHARGEMENT MOD DÉMO ---
   const loadSampleMod = async (sample: SampleMod) => {
+    setModSource(null);
     try {
       setIsLoading(true);
       const parsedConfig = parseModuleConfigXml(sample.moduleConfigXml);
@@ -281,6 +287,8 @@ export default function App() {
         setIsLoading(false);
         return;
       }
+      const rootName = norm((filesArray[0] as File & { webkitRelativePath?: string }).webkitRelativePath || '').split('/')[0];
+      setModSource(rootName ? { name: rootName, isArchive: false } : null);
 
       for (const file of filesArray) {
         const rawPath = norm((file as any).webkitRelativePath || file.name);
@@ -375,6 +383,7 @@ export default function App() {
 
   // --- TRAITEMENT ARCHIVE (ZIP, RAR, 7Z, TAR, etc.) ---
   const handleArchiveFile = async (file: File) => {
+    setModSource({ name: file.name, isArchive: true });
     setIsLoading(true);
     setErrorMessage(null);
     setStatusMessage(`Ouverture de ${file.name}...`);
@@ -601,10 +610,26 @@ export default function App() {
     setStagingResult(res);
     setDirectWriteSuccess(false);
 
+    // Un sous-dossier par mod, pour préparer plusieurs mods dans le même dossier de staging
+    const folderName = stagingFolderName(modSource?.name ?? null, modName, modSource?.isArchive ?? true);
+    let modDir: FileSystemDirectoryHandle | null;
+    try {
+      modDir = await prepareModDirectory(handle, folderName, () =>
+        window.confirm(
+          `${strings.stagingExport.existsTitle.replace('{name}', folderName)}\n\n${strings.stagingExport.existsMessage}`
+        )
+      );
+    } catch (err) {
+      alert(`Impossible de préparer le dossier "${folderName}" : ${err}`);
+      return;
+    }
+    if (!modDir) return; // remplacement refusé
+    setStagingTargetDisplay(`/${handle.name}/${folderName}`);
+
     try {
       setIsLoading(true);
-      setStatusMessage(`Copie directe des ${res.totalCopied} fichiers vers "${handle.name}"...`);
-      const written = await writeStagingToLocalDirectoryHandle(handle, res);
+      setStatusMessage(`Copie directe des ${res.totalCopied} fichiers vers "${folderName}"...`);
+      const written = await writeStagingToLocalDirectoryHandle(modDir, res);
       setDirectWriteSuccess(written.success);
       if (written.failures.length > 0) {
         alert(formatExportFailures(written.failures, strings.stagingExport.failedTitle, strings.stagingExport.failedMessage));
@@ -1285,7 +1310,7 @@ export default function App() {
         isOpen={stagingModalOpen}
         onClose={() => setStagingModalOpen(false)}
         result={stagingResult}
-        stagingPathDisplay={stagingDirPath}
+        stagingPathDisplay={stagingTargetDisplay || stagingDirPath}
         directWriteSuccess={directWriteSuccess}
       />
 

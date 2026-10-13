@@ -95,6 +95,9 @@ STRINGS = {
         "cancel": "Annuler",
     },
     "stagingExport": {
+        "existsTitle": "Le dossier « {name} » existe déjà",
+        "existsMessage": "Son contenu sera remplacé par le nouveau staging (les fichiers d'un staging précédent seront supprimés).",
+        "replace": "Remplacer",
         "writing": "Écriture du staging (lecture des fichiers dans l'archive)…",
         "failedTitle": "{count} fichier(s) n'ont pas pu être écrits",
         "failedMessage": "Leur contenu n'a pas pu être lu dans l'archive : ils n'ont pas été créés dans le dossier de staging. Détails ci-dessous.",

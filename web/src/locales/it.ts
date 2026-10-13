@@ -79,6 +79,9 @@ export const it: Translations = {
     cancel: "Annulla",
   },
   stagingExport: {
+    existsTitle: "La cartella «{name}» esiste già",
+    existsMessage: "Il suo contenuto verrà sostituito dal nuovo staging (i file di uno staging precedente verranno eliminati).",
+    replace: "Sostituisci",
     failedTitle: "Impossibile scrivere {count} file",
     failedMessage: "Non è stato possibile leggerne il contenuto nell'archivio: non sono stati creati.",
   },

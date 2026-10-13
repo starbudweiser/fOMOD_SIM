@@ -309,3 +309,84 @@ export function formatExportFailures(failures: string[], title: string, message:
   const more = failures.length > 15 ? `\n… (+${failures.length - 15})` : '';
   return `${title.replace('{count}', String(failures.length))}\n\n${message}\n\n${shown}${more}`;
 }
+
+// Noms d'archives Nexus (téléchargement manuel, Vortex, collections), suffixes à retirer
+// (portage de staging.clean_archive_name) :
+/** récent : « <nom> <id> <version> 2026-09-15T13-16Z <code> » */
+const NEXUS_NEW = /\s+\d{2,7}\s+\S+\s+\d{4}-\d{2}-\d{2}T\d{2}-\d{2}Z(?:\s+[0-9A-Za-z_-]+)?$/;
+/** ancien : « <nom>-<id>-<version…>[-<horodatage>] » */
+const NEXUS_OLD = /-\d{3,7}(?:-[0-9A-Za-z.]+){1,6}$/;
+/** collections : « <nom_avec_tirets_bas>_<version>_<code de 9 caractères> » */
+const NEXUS_UNDERSCORE = /(?:_[0-9][0-9.]*)*_[0-9A-Za-z]{9}$/;
+/** tronqué : « <nom>-<id>- » */
+const NEXUS_TRUNCATED = /-\d{3,7}-$/;
+/** copie du navigateur : « … (1) » */
+const DUPLICATE_MARK = /\s*\(\d{1,2}\)$/;
+const ARCHIVE_EXTS = ['.tar.gz', '.tar.bz2', '.zip', '.7z', '.rar', '.tar', '.tgz', '.gz', '.bz2'];
+
+/**
+ * Nom lisible d'une archive de mod (sans extension) : retire l'identifiant, la version,
+ * l'horodatage et le code ajoutés par Nexus, ainsi que la marque de copie « (1) ».
+ */
+export function cleanArchiveName(base: string): string {
+  for (const candidate of [base, base.replace(DUPLICATE_MARK, '')]) {
+    if (NEXUS_NEW.test(candidate)) return candidate.replace(NEXUS_NEW, '');
+    if (NEXUS_OLD.test(candidate)) return candidate.replace(NEXUS_OLD, '');
+    if (!candidate.includes(' ') && candidate.includes('_') && NEXUS_UNDERSCORE.test(candidate)) {
+      const stripped = candidate.replace(NEXUS_UNDERSCORE, '');
+      if (stripped) return stripped.replace(/_/g, ' ');
+    }
+    if (NEXUS_TRUNCATED.test(candidate)) return candidate.replace(NEXUS_TRUNCATED, '');
+  }
+  return base;
+}
+
+/**
+ * Nom du dossier de staging d'un mod (portage de staging.staging_folder_name) : nom de l'archive
+ * (ou du dossier) nettoyé des ajouts de Nexus, sinon nom du mod, en majuscules. Deux variantes
+ * d'un même mod (16-9 / 16-10…) ont souvent le même nom de mod, mais des archives distinctes.
+ */
+export function stagingFolderName(sourceName: string | null, modName = '', isArchive = true): string {
+  let name = '';
+  if (sourceName) {
+    let base = sourceName.split(/[/\\]/).filter(Boolean).pop() || '';
+    if (isArchive) {
+      const ext = ARCHIVE_EXTS.find(e => base.toLowerCase().endsWith(e));
+      if (ext) base = base.slice(0, -ext.length);
+      name = cleanArchiveName(base) || base;
+    } else {
+      name = base;
+    }
+  }
+  // eslint-disable-next-line no-control-regex
+  name = (name || modName || 'Mod FOMOD').replace(/[/\\:*?"<>|\x00-\x1f]+/g, '-');
+  name = name.replace(/\s{2,}/g, ' ').replace(/^[ .\-_]+|[ .\-_]+$/g, '');
+  return (name || 'Mod FOMOD').toUpperCase();
+}
+
+/**
+ * Sous-dossier du mod dans le dossier de staging. S'il existe déjà avec du contenu, il est vidé
+ * après confirmation (sinon des fichiers d'options décochées depuis resteraient). null : annulé.
+ */
+export async function prepareModDirectory(
+  root: FileSystemDirectoryHandle,
+  name: string,
+  confirmReplace: () => boolean
+): Promise<FileSystemDirectoryHandle | null> {
+  let existing: FileSystemDirectoryHandle | null = null;
+  try {
+    existing = await root.getDirectoryHandle(name);
+  } catch {
+    existing = null;
+  }
+  if (existing) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const it = (existing as any).values() as AsyncIterableIterator<unknown>;
+    const hasContent = !(await it.next()).done;
+    if (hasContent) {
+      if (!confirmReplace()) return null;
+      await root.removeEntry(name, { recursive: true });
+    }
+  }
+  return root.getDirectoryHandle(name, { create: true });
+}

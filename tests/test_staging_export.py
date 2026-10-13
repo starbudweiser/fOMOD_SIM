@@ -9,7 +9,7 @@ import zipfile
 from python_app.fomod.extractor import extract_archive
 from python_app.fomod.parser import parse_module_config_xml
 from python_app.fomod.session import InstallSession
-from python_app.fomod.staging import export_staging_to_directory, export_staging_to_zip
+from python_app.fomod.staging import export_staging_to_directory, export_staging_to_zip, staging_folder_name
 
 CONFIG = """<?xml version="1.0" encoding="UTF-8"?>
 <config><moduleName>Test</moduleName><installSteps order="Explicit">
@@ -66,6 +66,36 @@ class TestStagingExport(unittest.TestCase):
         self.assertEqual(len(failures), len(TEXTURES))
         for item in self.result.items:
             self.assertFalse(os.path.exists(os.path.join(out, item.destination_path)))
+
+
+class TestStagingFolderName(unittest.TestCase):
+    def test_nexus_archive_suffix_removed_uppercase(self):
+        self.assertEqual(
+            staging_folder_name("/m/5 Main Menu Compendium - Randomizer (16-10)-150450-2-0-1747924526.zip", "LMMC"),
+            "5 MAIN MENU COMPENDIUM - RANDOMIZER (16-10)",
+        )
+        self.assertEqual(staging_folder_name("/m/SLF Hair - Lite 1K-36510-2-0.7z"), "SLF HAIR - LITE 1K")
+
+    def test_recent_nexus_and_collection_formats(self):
+        cases = {
+            "LMMC - Randomizer (16-9_10) (2K) 150450 2.1.1 2026-09-15T13-16Z izkcFpI8F.7z": "LMMC - RANDOMIZER (16-9_10) (2K)",
+            "Accuracy - MCM menu 187578 MCM-01 2026-08-07T23-03Z CmfxYjTwZ.zip": "ACCURACY - MCM MENU",
+            "DynDOLOD 3.00 68518 Alpha-208 2026-07-24T09-23Z OyYrPubRn (1).7z": "DYNDOLOD 3.00",
+            "Easy_Console_Commands_1.0.25_Ks18n0cJO.zip": "EASY CONSOLE COMMANDS",
+            "Lute-3391-.zip": "LUTE",
+            "Lock.Picking.Redone.7z": "LOCK.PICKING.REDONE",
+        }
+        for archive, expected in cases.items():
+            self.assertEqual(staging_folder_name("/m/" + archive), expected)
+
+    def test_variants_of_same_mod_get_distinct_folders(self):
+        a = staging_folder_name("/m/LMMC - Randomizer (16-9)-150450-2-0-1.zip", "Lore-Friendly Main Menu Compendium")
+        b = staging_folder_name("/m/LMMC - Randomizer (21-9)-150450-2-0-1.zip", "Lore-Friendly Main Menu Compendium")
+        self.assertNotEqual(a, b)
+
+    def test_fallback_and_forbidden_characters(self):
+        self.assertEqual(staging_folder_name(None, "Nom: du/mod"), "NOM- DU-MOD")
+        self.assertEqual(staging_folder_name(None, ""), "MOD FOMOD")
 
 
 if __name__ == "__main__":
