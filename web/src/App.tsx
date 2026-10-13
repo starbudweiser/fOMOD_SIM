@@ -18,7 +18,7 @@ import {
   findFileInIndex,
   isOptionRecommended,
 } from './utils/fomodParser';
-import { extractAnyArchive, reanchorIndex } from './utils/archiveExtractor';
+import { extractAnyArchive, reanchorIndex, selectFomodXml } from './utils/archiveExtractor';
 import {
   buildStaging,
   writeStagingToLocalDirectoryHandle,
@@ -328,9 +328,6 @@ export default function App() {
       const filesMap = new Map<string, VirtualFileEntry>();
       const dirsMap = new Map<string, string>();
 
-      let moduleConfigText = '';
-      let infoText = '';
-
       const filesArray = Array.from(fileList);
       if (filesArray.length === 0) {
         setIsLoading(false);
@@ -362,21 +359,6 @@ export default function App() {
           url,
         });
 
-        const basename = lower.split('/').pop() || '';
-        if (basename === 'moduleconfig.xml' && !moduleConfigText) {
-          try {
-            moduleConfigText = await file.text();
-          } catch (e) {
-            console.warn('Erreur lecture ModuleConfig.xml:', e);
-          }
-        } else if (basename === 'info.xml' && !infoText) {
-          try {
-            infoText = await file.text();
-          } catch (e) {
-            console.warn('Erreur lecture info.xml:', e);
-          }
-        }
-
         const parts = normalized.split('/');
         let cur = '';
         for (let i = 0; i < parts.length - 1; i++) {
@@ -388,19 +370,7 @@ export default function App() {
       // Re-ancrer l'index à la racine du FOMOD (supprime tout dossier racine parent englobant)
       const reanchored = reanchorIndex(filesMap, dirsMap);
 
-      // Si ModuleConfig.xml n'a pas été détecté au premier passage, chercher dans l'index réancré
-      if (!moduleConfigText) {
-        for (const [lowerPath, entry] of reanchored.files.entries()) {
-          if (lowerPath.endsWith('moduleconfig.xml') && entry.blob) {
-            try {
-              moduleConfigText = await entry.blob.text();
-              break;
-            } catch (e) {
-              console.warn(e);
-            }
-          }
-        }
-      }
+      const { moduleConfigXml: moduleConfigText, infoXml: infoText } = await selectFomodXml(reanchored.files);
 
       if (!moduleConfigText) {
         setErrorMessage(
@@ -411,18 +381,6 @@ export default function App() {
         return;
       }
 
-      if (!infoText) {
-        for (const [lowerPath, entry] of reanchored.files.entries()) {
-          if (lowerPath.endsWith('info.xml') && entry.blob) {
-            try {
-              infoText = await entry.blob.text();
-              break;
-            } catch (e) {
-              console.warn(e);
-            }
-          }
-        }
-      }
 
       setStatusMessage('Analyse de la configuration FOMOD...');
       const parsedConfig = parseModuleConfigXml(moduleConfigText);

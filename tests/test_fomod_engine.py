@@ -285,5 +285,69 @@ class TestFomodParser(unittest.TestCase):
                 os.remove(tmp_path)
 
 
+class TestFomodLocation(unittest.TestCase):
+    """ModuleConfig.xml / info.xml trouvés dans le dossier fomod/, quel que soit son niveau."""
+
+    STRAY_CONFIG = "<config><installSteps/></config>"
+
+    def _write(self, root, rel, text):
+        full = os.path.join(root, rel)
+        os.makedirs(os.path.dirname(full), exist_ok=True)
+        with open(full, "w", encoding="utf-8") as fh:
+            fh.write(text)
+
+    def _make_tree(self, root):
+        self._write(root, "Mon Mod v1.0/fomod/ModuleConfig.xml", SAMPLE_CBBE_MODULE_CONFIG_XML)
+        self._write(root, "Mon Mod v1.0/Fomod/info.xml", SAMPLE_CBBE_INFO_XML)
+        # Leurres hors du dossier fomod/ : ne doivent pas être choisis
+        self._write(root, "Mon Mod v1.0/Docs/ModuleConfig.xml", self.STRAY_CONFIG)
+        self._write(root, "Mon Mod v1.0/SKSE/Plugins/info.xml", "<plugin/>")
+        self._write(root, "Mon Mod v1.0/00 Core/mod.esp", "esp")
+
+    def _assert_found(self, index, cfg, info):
+        self.assertIn("CBBE", cfg)
+        self.assertEqual(cfg, SAMPLE_CBBE_MODULE_CONFIG_XML)
+        self.assertEqual(info, SAMPLE_CBBE_INFO_XML)
+        self.assertIn("00 core/mod.esp", index.files)
+
+    def test_nested_fomod_in_7z(self):
+        import py7zr
+
+        with tempfile.TemporaryDirectory() as src, tempfile.TemporaryDirectory() as out:
+            self._make_tree(src)
+            archive = os.path.join(out, "mod.7z")
+            with py7zr.SevenZipFile(archive, "w") as sz:
+                sz.writeall(os.path.join(src, "Mon Mod v1.0"), "Mon Mod v1.0")
+            index, cfg, info = extract_archive(archive)
+            self._assert_found(index, cfg, info)
+
+    def test_nested_fomod_in_zip(self):
+        with tempfile.TemporaryDirectory() as src, tempfile.TemporaryDirectory() as out:
+            self._make_tree(src)
+            archive = os.path.join(out, "mod.zip")
+            with zipfile.ZipFile(archive, "w") as zf:
+                for cur, _, files in os.walk(src):
+                    for f in files:
+                        full = os.path.join(cur, f)
+                        zf.write(full, os.path.relpath(full, src))
+            index, cfg, info = extract_archive(archive)
+            self._assert_found(index, cfg, info)
+
+    def test_nested_fomod_in_folder(self):
+        with tempfile.TemporaryDirectory() as src:
+            self._make_tree(src)
+            index, cfg, info = extract_archive(src)
+            self._assert_found(index, cfg, info)
+
+    def test_reanchor_ignores_folder_ending_with_fomod(self):
+        files = {
+            "mon-fomod/moduleconfig.xml": VirtualFileEntry(path="mon-fomod/ModuleConfig.xml"),
+            "mon-fomod/mod.esp": VirtualFileEntry(path="mon-fomod/mod.esp"),
+            "autre/readme.txt": VirtualFileEntry(path="autre/readme.txt"),
+        }
+        new_files, _ = reanchor_index(files, {})
+        self.assertEqual(set(new_files), set(files))
+
+
 if __name__ == "__main__":
     unittest.main()

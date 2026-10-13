@@ -25,6 +25,40 @@ export interface ExtractedArchiveResult {
   infoXml: string;
 }
 
+const FOMOD_CONFIG_SUFFIX = 'fomod/moduleconfig.xml';
+
+/**
+ * Returns ModuleConfig.xml and info.xml from the index, preferring the ones stored
+ * in a "fomod/" folder, then the shallowest in the tree.
+ */
+export async function selectFomodXml(
+  filesMap: Map<string, VirtualFileEntry>
+): Promise<{ moduleConfigXml: string; infoXml: string }> {
+  const pick = async (basename: string): Promise<string> => {
+    const rank = (k: string) => {
+      const parts = k.split('/');
+      return [parts[parts.length - 2] === 'fomod' ? 0 : 1, parts.length] as const;
+    };
+    const matches = [...filesMap.keys()]
+      .filter((k) => k.split('/').pop() === basename)
+      .sort((a, b) => {
+        const [ra, rb] = [rank(a), rank(b)];
+        return ra[0] - rb[0] || ra[1] - rb[1] || a.localeCompare(b);
+      });
+    for (const k of matches) {
+      const entry = filesMap.get(k)!;
+      try {
+        const blob = entry.blob || (entry.getBlob ? await entry.getBlob() : undefined);
+        if (blob) return await blob.text();
+      } catch (err) {
+        console.warn(`Lecture impossible de ${k}`, err);
+      }
+    }
+    return '';
+  };
+  return { moduleConfigXml: await pick('moduleconfig.xml'), infoXml: await pick('info.xml') };
+}
+
 /**
  * Extracts a ZIP archive using JSZip (lightweight, zero WebAssembly overhead).
  */
@@ -39,12 +73,16 @@ export function reanchorIndex(
 ): { files: Map<string, VirtualFileEntry>; dirs: Map<string, string> } {
   let rootPrefix = '';
 
-  // 1. Search for fomod/moduleconfig.xml inside a wrapper directory
-  for (const [lowerPath] of filesMap.entries()) {
-    const fomodIdx = lowerPath.indexOf('fomod/moduleconfig.xml');
-    if (fomodIdx > 0) {
-      rootPrefix = lowerPath.substring(0, fomodIdx);
-      break;
+  // 1. Search for a fomod/ folder holding ModuleConfig.xml, shallowest first
+  //    (whole segment only: "my-fomod/" is not a fomod folder)
+  const candidates = [...filesMap.keys()].filter(
+    (k) => k === FOMOD_CONFIG_SUFFIX || k.endsWith(`/${FOMOD_CONFIG_SUFFIX}`)
+  );
+  if (candidates.length > 0) {
+    const best = candidates.reduce((a, b) => (b.split('/').length < a.split('/').length ? b : a));
+    rootPrefix = best.slice(0, -FOMOD_CONFIG_SUFFIX.length);
+    if (!rootPrefix) {
+      return { files: filesMap, dirs: dirsMap };
     }
   }
 
@@ -108,8 +146,6 @@ export async function extractZipArchive(
   const filesMap = new Map<string, VirtualFileEntry>();
   const dirsMap = new Map<string, string>();
 
-  let moduleConfigXml = '';
-  let infoXml = '';
 
   const entries = Object.keys(zip.files);
   onProgress?.(`Indexation de ${entries.length} éléments...`);
@@ -141,11 +177,6 @@ export async function extractZipArchive(
         if (isImg) {
           url = URL.createObjectURL(blob);
         }
-        if (basename === 'moduleconfig.xml') {
-          moduleConfigXml = await blob.text();
-        } else if (basename === 'info.xml') {
-          infoXml = await blob.text();
-        }
       }
 
       const approxSize = (zipEntry as any)._data?.uncompressedSize || blob?.size || 1024;
@@ -168,20 +199,9 @@ export async function extractZipArchive(
     }
   }
 
-  // Si moduleConfigXml n'a pas été capturé par basename exact, recherche souple
-  if (!moduleConfigXml) {
-    for (const [k, entry] of filesMap.entries()) {
-      if (k.endsWith('moduleconfig.xml')) {
-        const rawBlob = entry.blob || (entry.getBlob ? await entry.getBlob() : undefined);
-        if (rawBlob) {
-          moduleConfigXml = await rawBlob.text();
-          break;
-        }
-      }
-    }
-  }
 
   const reanchored = reanchorIndex(filesMap, dirsMap);
+  const { moduleConfigXml, infoXml } = await selectFomodXml(reanchored.files);
 
   return {
     index: reanchored,
@@ -212,8 +232,6 @@ export async function extractUniversalArchive(
 
   const filesMap = new Map<string, VirtualFileEntry>();
   const dirsMap = new Map<string, string>();
-  let moduleConfigXml = '';
-  let infoXml = '';
 
   let processedCount = 0;
 
@@ -252,20 +270,6 @@ export async function extractUniversalArchive(
       url,
     });
 
-    const basename = lower.split('/').pop() || '';
-    if (basename === 'moduleconfig.xml' && !moduleConfigXml) {
-      try {
-        moduleConfigXml = await blob.text();
-      } catch (tErr) {
-        console.warn('Erreur lecture texte moduleconfig.xml', tErr);
-      }
-    } else if (basename === 'info.xml' && !infoXml) {
-      try {
-        infoXml = await blob.text();
-      } catch (tErr) {
-        console.warn('Erreur lecture texte info.xml', tErr);
-      }
-    }
 
     const parts = normalized.split('/');
     let cur = '';
@@ -313,17 +317,9 @@ export async function extractUniversalArchive(
     );
   }
 
-  // Recherche de secours si moduleConfigXml n'a pas été extrait
-  if (!moduleConfigXml) {
-    for (const [lowerPath, entry] of filesMap.entries()) {
-      if (lowerPath.endsWith('moduleconfig.xml') && entry.blob) {
-        moduleConfigXml = await entry.blob.text();
-        break;
-      }
-    }
-  }
 
   const reanchored = reanchorIndex(filesMap, dirsMap);
+  const { moduleConfigXml, infoXml } = await selectFomodXml(reanchored.files);
 
   return {
     index: reanchored,

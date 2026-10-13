@@ -15,6 +15,37 @@ from .parser import norm
 logger = logging.getLogger(__name__)
 
 IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".bmp", ".dds", ".webp", ".gif")
+FOMOD_CONFIG_SUFFIX = "fomod/moduleconfig.xml"
+# Taille maximale d'un fichier lu en mémoire depuis une archive 7z (XML, images, INI…)
+MAX_7Z_MEMBER_BYTES = 128 * 1024 * 1024
+
+
+def _read_entry_bytes(entry: VirtualFileEntry) -> Optional[bytes]:
+    if entry.data:
+        return entry.data
+    if entry.extracted_disk_path and os.path.exists(entry.extracted_disk_path):
+        try:
+            with open(entry.extracted_disk_path, "rb") as fh:
+                return fh.read()
+        except OSError as e:
+            logger.warning(f"Impossible de lire {entry.extracted_disk_path} : {e}")
+    return None
+
+
+def select_fomod_xml(files_map: Dict[str, VirtualFileEntry]) -> Tuple[str, str]:
+    """Renvoie (ModuleConfig.xml, info.xml) de l'index, en privilégiant ceux rangés
+    dans un dossier « fomod/ », puis le moins profond dans l'arborescence."""
+
+    def pick(basename: str) -> str:
+        matches = [k for k in files_map if k.split("/")[-1] == basename]
+        matches.sort(key=lambda k: (k.split("/")[-2:-1] != ["fomod"], k.count("/"), k))
+        for k in matches:
+            data = _read_entry_bytes(files_map[k])
+            if data:
+                return decode_xml_text(data)
+        return ""
+
+    return pick("moduleconfig.xml"), pick("info.xml")
 
 
 def reanchor_index(
@@ -26,12 +57,17 @@ def reanchor_index(
     et réaligne tous les chemins à la racine du FOMOD."""
     root_prefix = ""
 
-    # 1. Recherche de fomod/moduleconfig.xml dans un sous-dossier
-    for lower_path in files_map.keys():
-        fomod_idx = lower_path.find("fomod/moduleconfig.xml")
-        if fomod_idx > 0:
-            root_prefix = lower_path[:fomod_idx]
-            break
+    # 1. Recherche d'un dossier fomod/ contenant ModuleConfig.xml, le moins profond d'abord
+    #    (segment entier : « mon-fomod/ » ne compte pas comme un dossier fomod)
+    candidates = [
+        k for k in files_map.keys()
+        if k == FOMOD_CONFIG_SUFFIX or k.endswith("/" + FOMOD_CONFIG_SUFFIX)
+    ]
+    if candidates:
+        best = min(candidates, key=lambda k: k.count("/"))
+        root_prefix = best[: -len(FOMOD_CONFIG_SUFFIX)]
+        if not root_prefix:
+            return files_map, dirs_map
 
     # 2. Si non trouvé par fomod, vérifier si tous les fichiers partagent un préfixe commun unique
     if not root_prefix and files_map:
@@ -112,8 +148,6 @@ def extract_directory(
 
     files_map: Dict[str, VirtualFileEntry] = {}
     dirs_map: Dict[str, str] = {}
-    module_config_xml = ""
-    info_xml = ""
 
     total_files = 0
 
@@ -144,11 +178,6 @@ def extract_directory(
                 extracted_disk_path=full_path,
             )
 
-            bn = lower.split("/")[-1]
-            if bn == "moduleconfig.xml" and data:
-                module_config_xml = decode_xml_text(data)
-            elif bn == "info.xml" and data:
-                info_xml = decode_xml_text(data)
 
             parts = rel_path.split("/")
             cur = ""
@@ -162,34 +191,8 @@ def extract_directory(
 
     new_files, new_dirs = reanchor_index(files_map, dirs_map)
 
-    if not module_config_xml:
-        for k, v in new_files.items():
-            if k.endswith("moduleconfig.xml"):
-                if v.data:
-                    module_config_xml = decode_xml_text(v.data)
-                    break
-                elif v.extracted_disk_path and os.path.exists(v.extracted_disk_path):
-                    try:
-                        with open(v.extracted_disk_path, "rb") as fh:
-                            module_config_xml = decode_xml_text(fh.read())
-                        break
-                    except Exception as e:
-                        logger.warning(f"Impossible de lire moduleconfig.xml : {e}")
 
-    if not info_xml:
-        for k, v in new_files.items():
-            if k.endswith("info.xml"):
-                if v.data:
-                    info_xml = decode_xml_text(v.data)
-                    break
-                elif v.extracted_disk_path and os.path.exists(v.extracted_disk_path):
-                    try:
-                        with open(v.extracted_disk_path, "rb") as fh:
-                            info_xml = decode_xml_text(fh.read())
-                        break
-                    except Exception as e:
-                        logger.warning(f"Impossible de lire info.xml : {e}")
-
+    module_config_xml, info_xml = select_fomod_xml(new_files)
     return ArchiveIndex(files=new_files, dirs=new_dirs, archive_path=folder_path), module_config_xml, info_xml
 
 
@@ -203,8 +206,6 @@ def extract_zip(
 
     files_map: Dict[str, VirtualFileEntry] = {}
     dirs_map: Dict[str, str] = {}
-    module_config_xml = ""
-    info_xml = ""
 
     with zipfile.ZipFile(archive_path, "r") as zf:
         infolist = zf.infolist()
@@ -236,11 +237,6 @@ def extract_zip(
                     data=data,
                 )
 
-                bn = lower.split("/")[-1]
-                if bn == "moduleconfig.xml" and data:
-                    module_config_xml = decode_xml_text(data)
-                elif bn == "info.xml" and data:
-                    info_xml = decode_xml_text(data)
 
                 parts = normalized.split("/")
                 cur = ""
@@ -252,6 +248,7 @@ def extract_zip(
                 progress_cb(f"Indexation ZIP : {idx}/{total} éléments...")
 
     new_files, new_dirs = reanchor_index(files_map, dirs_map)
+    module_config_xml, info_xml = select_fomod_xml(new_files)
     return ArchiveIndex(files=new_files, dirs=new_dirs, archive_path=archive_path), module_config_xml, info_xml
 
 
@@ -265,8 +262,6 @@ def extract_tar(
 
     files_map: Dict[str, VirtualFileEntry] = {}
     dirs_map: Dict[str, str] = {}
-    module_config_xml = ""
-    info_xml = ""
 
     with tarfile.open(archive_path, "r:*") as tf:
         members = tf.getmembers()
@@ -293,11 +288,6 @@ def extract_tar(
                     data=data,
                 )
 
-                bn = lower.split("/")[-1]
-                if bn == "moduleconfig.xml" and data:
-                    module_config_xml = decode_xml_text(data)
-                elif bn == "info.xml" and data:
-                    info_xml = decode_xml_text(data)
 
                 parts = normalized.split("/")
                 cur = ""
@@ -306,6 +296,7 @@ def extract_tar(
                     dirs_map[cur.lower()] = cur
 
     new_files, new_dirs = reanchor_index(files_map, dirs_map)
+    module_config_xml, info_xml = select_fomod_xml(new_files)
     return ArchiveIndex(files=new_files, dirs=new_dirs), module_config_xml, info_xml
 
 
@@ -326,8 +317,6 @@ def extract_7z_with_cli(
 
     files_map: Dict[str, VirtualFileEntry] = {}
     dirs_map: Dict[str, str] = {}
-    module_config_xml = ""
-    info_xml = ""
 
     tmp_extract = tempfile.mkdtemp(prefix="fomod_extracted_")
     cmd_name = os.path.basename(cli_cmd).lower()
@@ -367,11 +356,6 @@ def extract_7z_with_cli(
                         extracted_disk_path=full_p,
                     )
 
-                    bn = fn.lower()
-                    if bn == "moduleconfig.xml" and data:
-                        module_config_xml = decode_xml_text(data)
-                    elif bn == "info.xml" and data:
-                        info_xml = decode_xml_text(data)
 
                     parts = rel_p.split("/")
                     cur = ""
@@ -381,26 +365,37 @@ def extract_7z_with_cli(
                 except Exception as e:
                     logger.warning(f"Erreur lecture fichier extrait CLI {full_p}: {e}")
 
-        # Si module_config_xml n'a pas été trouvé lors du premier passage
-        if not module_config_xml:
-            for root, _, fnames in os.walk(tmp_extract):
-                for fn in fnames:
-                    if fn.lower() == "moduleconfig.xml":
-                        fp = os.path.join(root, fn)
-                        try:
-                            with open(fp, "rb") as fh:
-                                module_config_xml = decode_xml_text(fh.read())
-                        except Exception as e:
-                            logger.warning(f"Erreur lecture moduleconfig.xml : {e}")
-                        break
-                if module_config_xml:
-                    break
 
         new_files, new_dirs = reanchor_index(files_map, dirs_map)
+        module_config_xml, info_xml = select_fomod_xml(new_files)
         return ArchiveIndex(files=new_files, dirs=new_dirs, temp_dir=tmp_extract), module_config_xml, info_xml
     except Exception as e:
         logger.error(f"Erreur lors de l'extraction CLI : {e}")
         raise
+
+
+def _read_7z_members(archive_path: str, targets: List[str]) -> Dict[str, bytes]:
+    """Lit en mémoire les membres demandés d'une archive 7z.
+    py7zr >= 1.0 a supprimé SevenZipFile.read() : on passe alors par extract(factory=…)."""
+    import py7zr
+
+    with py7zr.SevenZipFile(archive_path, mode="r") as sz:
+        if hasattr(sz, "read"):  # py7zr < 1.0
+            return {name: bio.read() for name, bio in sz.read(targets=targets).items()}
+
+        from py7zr.io import BytesIOFactory
+
+        factory = BytesIOFactory(MAX_7Z_MEMBER_BYTES)
+        sz.extract(targets=targets, factory=factory)
+
+    out: Dict[str, bytes] = {}
+    for name, bio in factory.products.items():
+        if hasattr(bio, "getvalue"):
+            out[name] = bio.getvalue()
+        else:
+            bio.seek(0)
+            out[name] = bio.read()
+    return out
 
 
 def extract_7z(
@@ -413,8 +408,6 @@ def extract_7z(
 
     files_map: Dict[str, VirtualFileEntry] = {}
     dirs_map: Dict[str, str] = {}
-    module_config_xml = ""
-    info_xml = ""
 
     # Tentative avec py7zr
     try:
@@ -442,7 +435,6 @@ def extract_7z(
                     data=None,
                 )
 
-                bn = lower.split("/")[-1]
                 parts = normalized.split("/")
                 cur = ""
                 for i in range(len(parts) - 1):
@@ -458,23 +450,15 @@ def extract_7z(
                 if progress_cb:
                     progress_cb("Chargement des configurations FOMOD et aperçus...")
                 try:
-                    read_dict = sz.read(targets=targets_to_extract)
-                    for raw_path, bio in read_dict.items():
-                        norm_p = norm(raw_path)
-                        lower = norm_p.lower()
-                        data = bio.read()
+                    for raw_path, data in _read_7z_members(archive_path, targets_to_extract).items():
+                        lower = norm(raw_path).lower()
                         if lower in files_map:
                             files_map[lower].data = data
-
-                        bn = lower.split("/")[-1]
-                        if bn == "moduleconfig.xml":
-                            module_config_xml = decode_xml_text(data)
-                        elif bn == "info.xml":
-                            info_xml = decode_xml_text(data)
                 except Exception as e:
                     logger.warning(f"Erreur extraction ciblée 7z : {e}")
 
             new_files, new_dirs = reanchor_index(files_map, dirs_map)
+            module_config_xml, info_xml = select_fomod_xml(new_files)
             return ArchiveIndex(files=new_files, dirs=new_dirs), module_config_xml, info_xml
 
     except Exception as py7zr_err:
@@ -501,8 +485,6 @@ def extract_rar(
 
     files_map: Dict[str, VirtualFileEntry] = {}
     dirs_map: Dict[str, str] = {}
-    module_config_xml = ""
-    info_xml = ""
 
     # 1. Tentative avec rarfile (si disponible et unrar configuré)
     try:
@@ -533,11 +515,6 @@ def extract_rar(
                     data=data,
                 )
 
-                bn = lower.split("/")[-1]
-                if bn == "moduleconfig.xml" and data:
-                    module_config_xml = decode_xml_text(data)
-                elif bn == "info.xml" and data:
-                    info_xml = decode_xml_text(data)
 
                 parts = normalized.split("/")
                 cur = ""
@@ -546,6 +523,7 @@ def extract_rar(
                     dirs_map[cur.lower()] = cur
 
             new_files, new_dirs = reanchor_index(files_map, dirs_map)
+            module_config_xml, info_xml = select_fomod_xml(new_files)
             return ArchiveIndex(files=new_files, dirs=new_dirs), module_config_xml, info_xml
     except Exception as rarfile_err:
         logger.info(f"rarfile non utilisable ({rarfile_err}), tentative par CLI système...")
