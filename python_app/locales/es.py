@@ -94,6 +94,11 @@ STRINGS = {
         "choose": "Elegir una carpeta…",
         "cancel": "Cancelar",
     },
+    "stagingExport": {
+        "writing": "Escribiendo el staging (leyendo los archivos del archivo comprimido)…",
+        "failedTitle": "No se pudieron escribir {count} archivo(s)",
+        "failedMessage": "No se pudo leer su contenido en el archivo comprimido: no se crearon en la carpeta de staging. Detalles abajo.",
+    },
     "modals": {
         "openMod": {
             "title": "Abrir un FOMOD",

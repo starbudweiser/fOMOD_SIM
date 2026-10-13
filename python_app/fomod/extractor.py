@@ -319,9 +319,13 @@ def extract_7z_with_cli(
     progress_cb: Optional[Callable[[str], None]] = None,
 ) -> Tuple[ArchiveIndex, str, str]:
     """Extraction via utilitaire CLI 7z, unrar ou bsdtar sans saturer la RAM."""
-    cli_cmd = shutil.which("7z") or shutil.which("7za") or shutil.which("7zr")
-    if not cli_cmd:
-        cli_cmd = shutil.which("unrar") or shutil.which("bsdtar") or shutil.which("tar")
+    if archive_path.lower().endswith(".rar"):
+        # Le 7-Zip de Homebrew n'a pas le décodeur RAR (fichiers extraits vides) : bsdtar d'abord
+        cli_cmd = shutil.which("bsdtar") or shutil.which("unrar") or shutil.which("7z")
+    else:
+        cli_cmd = shutil.which("7z") or shutil.which("7za") or shutil.which("7zr")
+        if not cli_cmd:
+            cli_cmd = shutil.which("unrar") or shutil.which("bsdtar") or shutil.which("tar")
 
     if not cli_cmd:
         raise RuntimeError("Aucun outil 7z, unrar ou tar/bsdtar disponible sur le système.")
@@ -645,4 +649,117 @@ def read_entries_bytes(index: ArchiveIndex, entries: List[VirtualFileEntry]) -> 
                             out[e.path.lower()] = r.stdout
     except Exception as err:
         logger.warning(f"Lecture différée impossible dans {os.path.basename(path)} : {err}")
+    return out
+
+
+def _cli_extract_members(archive_path: str, members: List[str], out_dir: str) -> None:
+    """Extraction de membres précis via 7z, unrar ou bsdtar (liste passée par fichier : pas de
+    limite de longueur de ligne de commande)."""
+    list_file = os.path.join(out_dir, ".fomodsim_members.txt")
+    with open(list_file, "w", encoding="utf-8") as fh:
+        fh.write("\n".join(members))
+    try:
+        seven = shutil.which("7z") or shutil.which("7zz") or shutil.which("7za")
+        unrar = shutil.which("unrar")
+        tar = shutil.which("bsdtar") or shutil.which("tar")
+        is_rar = archive_path.lower().endswith(".rar")
+        # RAR : le 7-Zip de Homebrew n'a pas le décodeur RAR (fichiers extraits vides) ; bsdtar
+        # (fourni avec macOS, libarchive) le gère
+        if is_rar and tar:
+            cmd = [tar, "-xf", archive_path, "-C", out_dir, "-T", list_file]
+        elif is_rar and unrar:
+            cmd = [unrar, "x", "-y", archive_path, f"@{list_file}", out_dir + os.sep]
+        elif seven:
+            cmd = [seven, "x", "-y", "-scsUTF-8", f"-o{out_dir}", archive_path, f"@{list_file}"]
+        elif tar:
+            cmd = [tar, "-xf", archive_path, "-C", out_dir, "-T", list_file]
+        else:
+            raise RuntimeError("Aucun outil 7z, unrar ou bsdtar disponible pour lire l'archive.")
+        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+    finally:
+        try:
+            os.remove(list_file)
+        except OSError:
+            pass
+
+
+def extract_members_to_dir(
+    index: ArchiveIndex,
+    members: List[str],
+    out_dir: str,
+    progress_cb: Optional[Callable[[str], None]] = None,
+) -> Dict[str, str]:
+    """Extrait sur disque, en flux et en une passe, les membres d'archive demandés (fichiers non
+    lus à l'indexation : textures, meshes…). Renvoie {membre: chemin du fichier extrait}.
+    Un membre absent du résultat n'a pas pu être lu."""
+    out: Dict[str, str] = {}
+    members = list(dict.fromkeys(m for m in members if m))
+    path = index.archive_path
+    if not members or not path or os.path.isdir(path):
+        return out
+    os.makedirs(out_dir, exist_ok=True)
+    ext = Path(path).suffix.lower()
+
+    def dest_of(member: str) -> str:
+        # Chemin de sortie confiné à out_dir (pas de « .. » ni de chemin absolu venant de l'archive)
+        safe = norm(member).lstrip("/")
+        parts = [p for p in safe.split("/") if p not in ("", ".", "..")]
+        return os.path.join(out_dir, *parts)
+
+    def stream(open_member, label: str) -> None:
+        for i, member in enumerate(members, 1):
+            if progress_cb and i % 25 == 0:
+                progress_cb(f"Lecture de l'archive ({label}) : {i} / {len(members)} fichiers...")
+            dest = dest_of(member)
+            os.makedirs(os.path.dirname(dest), exist_ok=True)
+            try:
+                with open_member(member) as src, open(dest, "wb") as fh:
+                    shutil.copyfileobj(src, fh, 1 << 20)
+                out[member] = dest
+            except Exception as e:
+                logger.warning(f"Lecture impossible de {member} : {e}")
+
+    try:
+        if ext == ".zip" or zipfile.is_zipfile(path):
+            with zipfile.ZipFile(path) as zf:
+                stream(zf.open, "zip")
+            return out
+        if ext in (".tar", ".gz", ".bz2", ".tgz"):
+            with tarfile.open(path, "r:*") as tf:
+                stream(lambda m: tf.extractfile(m) or io.BytesIO(b""), "tar")
+            return out
+        if ext == ".rar":
+            try:
+                import rarfile
+
+                with rarfile.RarFile(path) as rf:
+                    stream(rf.open, "rar")
+                return out
+            except Exception as e:
+                logger.info(f"rarfile indisponible ou en échec ({e}), repli sur les outils système")
+        elif ext == ".7z":
+            if progress_cb:
+                progress_cb(f"Décompression de {len(members)} fichiers depuis l'archive 7z...")
+            try:
+                import py7zr
+
+                with py7zr.SevenZipFile(path, mode="r") as sz:
+                    sz.extract(path=out_dir, targets=members)
+            except Exception as e:
+                logger.info(f"py7zr en échec ({e}), repli sur les outils système")
+            for m in members:
+                d = dest_of(m)
+                if os.path.isfile(d):
+                    out[m] = d
+
+        # Membres restants (RAR sans rarfile, 7z non géré par py7zr…) : outils système
+        missing = [m for m in members if m not in out]
+        if missing:
+            _cli_extract_members(path, missing, out_dir)
+            for m in missing:
+                d = dest_of(m)
+                if os.path.isfile(d):
+                    out[m] = d
+    except Exception as err:
+        logger.error(f"Extraction impossible depuis {os.path.basename(path)} : {err}")
     return out

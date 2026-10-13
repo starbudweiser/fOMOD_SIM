@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
     QWidget,
     QScrollArea,
     QApplication,
+    QMessageBox,
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
@@ -416,8 +417,10 @@ class StagingResultModal(QDialog):
         result: StagingResult,
         staging_dir_path: str="Bureau (Desktop)",
         parent=None,
+        archive_index=None,
     ):
         super().__init__(parent)
+        self.archive_index = archive_index
         self.setWindowTitle("Staging généré avec succès")
         self.setMinimumSize(780, 560)
         self.resize(860, 620)
@@ -626,9 +629,16 @@ class StagingResultModal(QDialog):
         )
         if path:
             try:
-                export_staging_to_zip(self.result, path)
+                failures = export_staging_to_zip(self.result, path, self.archive_index)
+                if failures:
+                    QMessageBox.warning(
+                        self, "Export ZIP",
+                        f"{len(failures)} fichier(s) n'ont pas pu être lus dans l'archive et manquent dans le ZIP :\n"
+                        + "\n".join(failures[:15]),
+                    )
             except Exception as e:
                 logger.error("Erreur lors de l'export ZIP: %s", e)
+                QMessageBox.critical(self, "Export ZIP", f"Erreur lors de l'export ZIP :\n{e}")
 
 
 class ImagePreviewModal(QDialog):

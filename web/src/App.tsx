@@ -36,6 +36,7 @@ import { extractAnyArchive, reanchorIndex, selectFomodXml } from './utils/archiv
 import {
   buildStaging,
   writeStagingToLocalDirectoryHandle,
+  formatExportFailures,
 } from './utils/fomodStaging';
 import {
   SAMPLE_MOD_CBBE,
@@ -603,8 +604,11 @@ export default function App() {
     try {
       setIsLoading(true);
       setStatusMessage(`Copie directe des ${res.totalCopied} fichiers vers "${handle.name}"...`);
-      await writeStagingToLocalDirectoryHandle(handle, res);
-      setDirectWriteSuccess(true);
+      const written = await writeStagingToLocalDirectoryHandle(handle, res);
+      setDirectWriteSuccess(written.success);
+      if (written.failures.length > 0) {
+        alert(formatExportFailures(written.failures, strings.stagingExport.failedTitle, strings.stagingExport.failedMessage));
+      }
     } catch (writeErr) {
       console.error('Erreur écriture locale directe:', writeErr);
       alert('Erreur lors de la copie des fichiers dans le dossier : ' + writeErr);

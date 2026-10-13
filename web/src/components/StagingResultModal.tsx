@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { StagingResult } from '../types/fomod';
-import { exportStagingAsZip, writeStagingToLocalDirectoryHandle } from '../utils/fomodStaging';
+import { exportStagingAsZip, formatExportFailures, writeStagingToLocalDirectoryHandle } from '../utils/fomodStaging';
 import { useI18n } from '../locales';
 
 interface StagingResultModalProps {
@@ -32,7 +32,10 @@ export default function StagingResultModal({
   const handleDownloadZip = async () => {
     try {
       setIsExporting(true);
-      const zipBlob = await exportStagingAsZip(result);
+      const { blob: zipBlob, failures } = await exportStagingAsZip(result);
+      if (failures.length > 0) {
+        alert(formatExportFailures(failures, strings.stagingExport.failedTitle, strings.stagingExport.failedMessage));
+      }
       const url = URL.createObjectURL(zipBlob);
       const a = document.createElement('a');
       a.href = url;
@@ -61,6 +64,9 @@ export default function StagingResultModal({
         mode: 'readwrite',
       });
       const writeRes = await writeStagingToLocalDirectoryHandle(rootHandle, result);
+      if (writeRes.failures.length > 0) {
+        alert(formatExportFailures(writeRes.failures, strings.stagingExport.failedTitle, strings.stagingExport.failedMessage));
+      }
       setWriteNotification(
         `✓ ${writeRes.writtenCount} ${m.writeSuccess} ("${writeRes.destinationFolderName}")`
       );

@@ -94,6 +94,11 @@ STRINGS = {
         "choose": "Choose a folder…",
         "cancel": "Cancel",
     },
+    "stagingExport": {
+        "writing": "Writing the staging (reading files from the archive)…",
+        "failedTitle": "{count} file(s) could not be written",
+        "failedMessage": "Their content could not be read from the archive: they were not created in the staging folder. Details below.",
+    },
     "modals": {
         "openMod": {
             "title": "Open a FOMOD",

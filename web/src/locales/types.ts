@@ -76,6 +76,10 @@ export interface Translations {
     choose: string;
     cancel: string;
   };
+  stagingExport: {
+    failedTitle: string;
+    failedMessage: string;
+  };
   modals: {
     openMod: {
       title: string;

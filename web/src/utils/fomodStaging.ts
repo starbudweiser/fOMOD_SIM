@@ -103,6 +103,8 @@ export function buildStaging(
       matchedFromOption: optName,
       priority,
       blob: entry.blob,
+      getBlob: entry.getBlob,
+      data: entry.data,
     });
     return true;
   };
@@ -206,28 +208,47 @@ export function buildStaging(
   };
 }
 
-export async function exportStagingAsZip(stagingResult: StagingResult): Promise<Blob> {
+/**
+ * Contenu d'un fichier du staging : chargé en mémoire, sinon lu dans l'archive. Un fichier d'un
+ * mod de démonstration (virtuel, sans contenu ni archive) reçoit un texte explicatif.
+ * null : contenu illisible — le fichier n'est pas écrit plutôt que d'être écrit vide.
+ */
+async function itemContent(item: StagingItem): Promise<Blob | string | null> {
+  if (item.blob) return item.blob;
+  if (item.data) return new Blob([item.data as BlobPart]);
+  if (item.getBlob) {
+    try {
+      const blob = await item.getBlob();
+      return blob.size > 0 || item.size === 0 ? blob : null;
+    } catch {
+      return null;
+    }
+  }
+  return `// Fichier de démonstration généré par fOMODSIM : ${item.destinationPath}\n// Source : ${item.sourcePath}\n// Option : ${item.matchedFromOption}\n`;
+}
+
+export async function exportStagingAsZip(
+  stagingResult: StagingResult
+): Promise<{ blob: Blob; failures: string[] }> {
   const zip = new JSZip();
+  const failures: string[] = [];
 
   // Ajouter install_log.txt
   zip.file('install_log.txt', stagingResult.log.join('\n'));
 
   // Ajouter tous les fichiers avec arborescence exacte
   for (const item of stagingResult.items) {
-    if (item.blob) {
-      zip.file(item.destinationPath, item.blob);
-    } else {
-      // Contenu de démonstration si le fichier est issu d'un mod virtuel/simulé
-      const dummyContent = `// Fichier généré par fOMODSIM : ${item.destinationPath}\n// Source: ${item.sourcePath}\n// Option: ${item.matchedFromOption}\n`;
-      zip.file(item.destinationPath, dummyContent);
-    }
+    const content = await itemContent(item);
+    if (content === null) failures.push(item.destinationPath);
+    else zip.file(item.destinationPath, content);
   }
 
-  return await zip.generateAsync({
+  const blob = await zip.generateAsync({
     type: 'blob',
     compression: 'DEFLATE',
     compressionOptions: { level: 6 },
   });
+  return { blob, failures };
 }
 
 /**
@@ -239,7 +260,7 @@ export async function exportStagingAsZip(stagingResult: StagingResult): Promise<
 export async function writeStagingToLocalDirectoryHandle(
   targetDirectoryHandle: FileSystemDirectoryHandle,
   stagingResult: StagingResult
-): Promise<{ success: boolean; writtenCount: number; destinationFolderName: string }> {
+): Promise<{ success: boolean; writtenCount: number; destinationFolderName: string; failures: string[] }> {
   const getTargetDirHandle = async (relPath: string): Promise<FileSystemDirectoryHandle> => {
     const parts = relPath.split(/[/\\]/).filter(Boolean);
     let current = targetDirectoryHandle;
@@ -257,29 +278,34 @@ export async function writeStagingToLocalDirectoryHandle(
 
   // 2. Écrire chaque fichier directement dans l'arborescence du dossier choisi
   let count = 0;
+  const failures: string[] = [];
   for (const item of stagingResult.items) {
+    const content = await itemContent(item);
+    if (content === null) {
+      failures.push(item.destinationPath);
+      continue;
+    }
     const parts = item.destinationPath.split(/[/\\]/);
     const fileName = parts.pop() || 'file';
-    const relDir = parts.join('/');
-
-    const dirHandle = await getTargetDirHandle(relDir);
+    const dirHandle = await getTargetDirHandle(parts.join('/'));
     const fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
     const writable = await fileHandle.createWritable();
-
-    if (item.blob) {
-      await writable.write(item.blob);
-    } else {
-      await writable.write(
-        `// Staged from FOMOD: ${item.sourcePath}\n// Option: ${item.matchedFromOption}\n`
-      );
-    }
+    await writable.write(content);
     await writable.close();
     count++;
   }
 
   return {
-    success: true,
+    success: failures.length === 0,
     writtenCount: count,
     destinationFolderName: targetDirectoryHandle.name,
+    failures,
   };
+}
+
+/** Texte d'alerte listant les fichiers que l'export n'a pas pu écrire. */
+export function formatExportFailures(failures: string[], title: string, message: string): string {
+  const shown = failures.slice(0, 15).join('\n');
+  const more = failures.length > 15 ? `\n… (+${failures.length - 15})` : '';
+  return `${title.replace('{count}', String(failures.length))}\n\n${message}\n\n${shown}${more}`;
 }

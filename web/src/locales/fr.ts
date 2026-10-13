@@ -78,6 +78,10 @@ export const fr: Translations = {
     choose: "Choisir un dossier…",
     cancel: "Annuler",
   },
+  stagingExport: {
+    failedTitle: "{count} fichier(s) n'ont pas pu être écrits",
+    failedMessage: "Leur contenu n'a pas pu être lu dans l'archive : ils n'ont pas été créés.",
+  },
   modals: {
     openMod: {
       title: 'Ouvrir un FOMOD',

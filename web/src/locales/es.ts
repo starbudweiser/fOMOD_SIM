@@ -78,6 +78,10 @@ export const es: Translations = {
     choose: "Elegir una carpeta…",
     cancel: "Cancelar",
   },
+  stagingExport: {
+    failedTitle: "No se pudieron escribir {count} archivo(s)",
+    failedMessage: "No se pudo leer su contenido en el archivo comprimido: no se crearon.",
+  },
   modals: {
     openMod: {
       title: 'Abrir un FOMOD',

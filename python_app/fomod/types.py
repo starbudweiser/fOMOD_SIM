@@ -163,6 +163,8 @@ class StagingItem:
     data: Optional[bytes] = None
     priority: int = 0
     extracted_disk_path: Optional[str] = None
+    # Membre de l'archive à lire à l'export quand le contenu n'a pas été chargé à l'indexation
+    member: Optional[str] = None
 
 
 @dataclass

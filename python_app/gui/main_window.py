@@ -43,9 +43,8 @@ from ..fomod.parser import (
 )
 from ..fomod.plugins import annotate_option_masters
 from ..fomod.demo_mod import get_demo_mod
-from ..fomod.staging import export_staging_to_directory
 from ..fomod.session import InstallSession
-from .workers import ArchiveExtractWorker, StagingWorker, PreviewLoadWorker
+from .workers import ArchiveExtractWorker, StagingWorker, PreviewLoadWorker, StagingExportWorker
 from ..fomod.preview import pick_preview_entries
 from .mod_info_dialog import ModInfoDialog
 from .modals import OpenModModal, DataDirModal, StagingResultModal, ImagePreviewModal
@@ -440,6 +439,7 @@ class MainWindow(QMainWindow):
         # Workers d'arrière-plan
         self._extract_worker: Optional[ArchiveExtractWorker] = None
         self._staging_worker: Optional[StagingWorker] = None
+        self._export_worker: Optional[StagingExportWorker] = None
 
         self._init_ui()
 
@@ -1594,17 +1594,34 @@ class MainWindow(QMainWindow):
             res = self.session.build_staging(self.archive_index)
             self.current_staging_result = res
 
-            if os.path.exists(self.staging_dir_path):
-                try:
-                    export_staging_to_directory(res, self.staging_dir_path)
-                except Exception as e:
-                    logger.error("Erreur copie directe staging: %s", e)
-
-            modal = StagingResultModal(res, self.staging_dir_path, self)
-            modal.exec()
+            self.loading_overlay.set_status(self.i18n.get("stagingExport", "writing"))
+            self.loading_overlay.resize(self.size())
+            self.loading_overlay.show()
+            self.loading_overlay.raise_()
+            self._export_worker = StagingExportWorker(res, self.staging_dir_path, self.archive_index)
+            self._export_worker.progress.connect(self.loading_overlay.set_status)
+            self._export_worker.finished.connect(lambda failures, r=res: self._on_staging_written(r, failures))
+            self._export_worker.error.connect(self._on_staging_write_error)
+            self._export_worker.start()
         except Exception as e:
             logger.exception("Erreur génération staging")
             QMessageBox.critical(self, "Erreur Staging", f"Une erreur est survenue lors de la génération du staging :\n{e}")
+
+    def _on_staging_written(self, res: StagingResult, failures: list):
+        self.loading_overlay.hide()
+        if failures:
+            box = QMessageBox(self)
+            box.setIcon(QMessageBox.Icon.Warning)
+            box.setText(self.i18n.get("stagingExport", "failedTitle").format(count=len(failures)))
+            box.setInformativeText(self.i18n.get("stagingExport", "failedMessage"))
+            box.setDetailedText("\n".join(failures))
+            box.exec()
+        modal = StagingResultModal(res, self.staging_dir_path, self, archive_index=self.archive_index)
+        modal.exec()
+
+    def _on_staging_write_error(self, err: str):
+        self.loading_overlay.hide()
+        QMessageBox.critical(self, "Erreur Staging", f"Une erreur est survenue lors de l'écriture du staging :\n{err}")
 
     # =========================================================================
     # OUVERTURE DES DIALOGUES MODALES
@@ -1821,6 +1838,9 @@ class MainWindow(QMainWindow):
             except (TypeError, RuntimeError):
                 pass
             self._staging_worker.wait(1000)
+        if self._export_worker and self._export_worker.isRunning():
+            # Écriture en cours : on la laisse finir pour ne pas laisser de fichiers tronqués
+            self._export_worker.wait()
 
     def closeEvent(self, event):
         self.cleanup_workers()

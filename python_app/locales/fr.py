@@ -94,6 +94,11 @@ STRINGS = {
         "choose": "Choisir un dossier…",
         "cancel": "Annuler",
     },
+    "stagingExport": {
+        "writing": "Écriture du staging (lecture des fichiers dans l'archive)…",
+        "failedTitle": "{count} fichier(s) n'ont pas pu être écrits",
+        "failedMessage": "Leur contenu n'a pas pu être lu dans l'archive : ils n'ont pas été créés dans le dossier de staging. Détails ci-dessous.",
+    },
     "modals": {
         "openMod": {
             "title": "Ouvrir un FOMOD",

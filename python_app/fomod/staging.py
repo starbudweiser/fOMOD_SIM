@@ -1,6 +1,7 @@
 import os
 import re
 import shutil
+import tempfile
 import zipfile
 import logging
 from typing import List, Dict, Optional, Set, Tuple
@@ -14,6 +15,7 @@ from .types import (
     ConditionalInstallPattern,
 )
 from .parser import norm, find_file_in_index, find_folder_in_index, evaluate_dependencies
+from .extractor import extract_members_to_dir
 
 logger = logging.getLogger(__name__)
 
@@ -119,6 +121,7 @@ def build_staging(
                         data=entry.data,
                         priority=priority,
                         extracted_disk_path=entry.extracted_disk_path,
+                        member=entry.member,
                     )
             return sub_copied
 
@@ -148,6 +151,7 @@ def build_staging(
                     data=src_file.data,
                     priority=priority,
                     extracted_disk_path=src_file.extracted_disk_path,
+                    member=src_file.member,
                 )
             elif src_dir:
                 sub_copied = copy_folder_files(src_dir)
@@ -184,6 +188,7 @@ def build_staging(
                     data=src_file.data,
                     priority=priority,
                     extracted_disk_path=src_file.extracted_disk_path,
+                    member=src_file.member,
                 )
             else:
                 missing += 1
@@ -233,30 +238,84 @@ def build_staging(
     )
 
 
-def export_staging_to_directory(staging_result: StagingResult, target_dir: str):
-    """Écrit physiquement les fichiers du staging simulé vers un répertoire de destination."""
+def export_staging_to_directory(
+    staging_result: StagingResult,
+    target_dir: str,
+    archive_index: Optional[ArchiveIndex] = None,
+    progress_cb=None,
+) -> List[str]:
+    """Écrit physiquement les fichiers du staging dans `target_dir`.
+
+    Le contenu vient, dans l'ordre : des octets chargés à l'indexation, du fichier sur disque
+    (dossier de mod), sinon de l'archive, lue en une passe et en flux (textures, meshes…).
+    Renvoie la liste des destinations dont le contenu n'a pas pu être obtenu : ces fichiers ne
+    sont pas créés, plutôt que d'écrire un fichier vide."""
     os.makedirs(target_dir, exist_ok=True)
+    failures: List[str] = []
+    pending: Dict[str, List[StagingItem]] = {}
+
+    def dest_of(item: StagingItem) -> str:
+        return os.path.join(target_dir, item.destination_path.replace("/", os.sep))
+
+    def prepare(item: StagingItem) -> str:
+        dest = dest_of(item)
+        os.makedirs(os.path.dirname(dest) or target_dir, exist_ok=True)
+        return dest
+
     for item in staging_result.items:
-        dest_full = os.path.join(target_dir, item.destination_path.replace("/", os.sep))
-        os.makedirs(os.path.dirname(dest_full), exist_ok=True)
         if item.data:
-            with open(dest_full, "wb") as fh:
+            with open(prepare(item), "wb") as fh:
                 fh.write(item.data)
         elif item.extracted_disk_path and os.path.isfile(item.extracted_disk_path):
-            try:
-                shutil.copy2(item.extracted_disk_path, dest_full)
-            except Exception as e:
-                logger.warning(f"Erreur copie disque {item.extracted_disk_path} -> {dest_full}: {e}")
-                with open(dest_full, "wb") as fh:
-                    fh.write(b"")
+            shutil.copy2(item.extracted_disk_path, prepare(item))
+        elif item.member and archive_index is not None:
+            pending.setdefault(item.member, []).append(item)
+        elif item.size == 0:
+            open(prepare(item), "wb").close()  # fichier réellement vide dans le mod
         else:
-            with open(dest_full, "wb") as fh:
-                fh.write(b"")
+            failures.append(item.destination_path)
+
+    if pending:
+        tmp = tempfile.mkdtemp(prefix=".fomodsim_extract_", dir=target_dir)
+        try:
+            extracted = extract_members_to_dir(archive_index, list(pending), tmp, progress_cb)
+            for member, items in pending.items():
+                src = extracted.get(member)
+                for item in items:
+                    if src and os.path.isfile(src):
+                        shutil.copyfile(src, prepare(item))
+                    else:
+                        failures.append(item.destination_path)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    # Contrôle : aucun fichier vide là où la source ne l'est pas
+    for item in staging_result.items:
+        dest = dest_of(item)
+        if item.destination_path in failures:
+            continue
+        if not os.path.isfile(dest) or (item.size > 0 and os.path.getsize(dest) == 0):
+            failures.append(item.destination_path)
+    if failures:
+        logger.error("Staging : %d fichier(s) sans contenu, par ex. %s", len(failures), failures[:3])
+    return failures
 
 
-def export_staging_to_zip(staging_result: StagingResult, zip_path: str):
-    """Génère une archive .ZIP propre du staging prêt à être installé."""
-    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
-        for item in staging_result.items:
-            data = item.data if item.data else b""
-            zf.writestr(item.destination_path, data)
+def export_staging_to_zip(
+    staging_result: StagingResult,
+    zip_path: str,
+    archive_index: Optional[ArchiveIndex] = None,
+    progress_cb=None,
+) -> List[str]:
+    """Génère une archive .ZIP du staging prête à être installée. Renvoie les fichiers sans contenu."""
+    tmp = tempfile.mkdtemp(prefix=".fomodsim_zip_")
+    try:
+        failures = export_staging_to_directory(staging_result, tmp, archive_index, progress_cb)
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            for item in staging_result.items:
+                src = os.path.join(tmp, item.destination_path.replace("/", os.sep))
+                if os.path.isfile(src):
+                    zf.write(src, item.destination_path)
+        return failures
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)

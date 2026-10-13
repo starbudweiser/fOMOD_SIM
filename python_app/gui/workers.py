@@ -10,7 +10,7 @@ from ..fomod.types import (
     ConditionalInstallPattern,
 )
 from ..fomod.extractor import extract_archive
-from ..fomod.staging import build_staging
+from ..fomod.staging import build_staging, export_staging_to_directory
 
 logger = logging.getLogger(__name__)
 
@@ -123,3 +123,27 @@ class PreviewLoadWorker(QThread):
         except Exception:
             logger.exception("Erreur de chargement des aperçus")
         self.loaded.emit(out)
+
+
+class StagingExportWorker(QThread):
+    """Écrit le staging sur disque en arrière-plan (lecture des fichiers dans l'archive comprise)."""
+
+    progress = pyqtSignal(str)
+    finished = pyqtSignal(object)  # liste des fichiers sans contenu
+    error = pyqtSignal(str)
+
+    def __init__(self, result: StagingResult, target_dir: str, archive_index: ArchiveIndex, parent=None):
+        super().__init__(parent)
+        self.result = result
+        self.target_dir = target_dir
+        self.archive_index = archive_index
+
+    def run(self):
+        try:
+            failures = export_staging_to_directory(
+                self.result, self.target_dir, self.archive_index, progress_cb=self.progress.emit
+            )
+            self.finished.emit(failures)
+        except Exception as e:
+            logger.exception("Erreur lors de l'écriture du staging")
+            self.error.emit(str(e))

@@ -128,6 +128,10 @@ export interface StagingItem {
   matchedFromOption: string;
   priority?: number;
   blob?: Blob;
+  /** Lecture différée du contenu dans l'archive (fichiers non chargés à l'ouverture : textures…) */
+  getBlob?: () => Promise<Blob>;
+  /** Contenu chargé en mémoire à l'indexation */
+  data?: Uint8Array;
 }
 
 export interface StagingResult {
