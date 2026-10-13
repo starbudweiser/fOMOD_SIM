@@ -51,6 +51,7 @@ export const fr: Translations = {
     loadDemoAction: 'Charger le mod exemple CBBE',
     prevStep: 'RETOUR',
     nextStep: 'CONTINUER',
+    finishStep: "TERMINER L'INSTALLATION",
     autoDetected: 'Dépendance détectée dans votre dossier Data',
   },
   preview: {

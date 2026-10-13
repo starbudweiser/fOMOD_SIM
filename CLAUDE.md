@@ -27,7 +27,7 @@ cd web && npm run build                   # sortie dans ../dist (racine du proje
 - `python_app/fomod/` : moteur — `parser.py` (ModuleConfig.xml), `session.py` (déroulé de l'installeur : visibilité, sélections, règles), `staging.py`, `preview.py` (choix de l'image d'aperçu), `extractor.py` (archives, lecture différée), `types.py`, `demo_mod.py`.
 - `python_app/gui/` : `main_window.py`, `modals.py`, `mod_info_dialog.py`, `preview_generator.py`, `workers.py` (QThread), `theme.py` (QSS).
 - `python_app/locales/` et `web/src/locales/` : un fichier par langue (`fr`, `en`, `es`, `it`).
-- `web/src/utils/` : équivalents TypeScript du moteur (`fomodParser.ts`, `fomodSession.ts`, `fomodStaging.ts`, `archiveExtractor.ts` via libarchive.js en WebAssembly).
+- `web/src/utils/` : équivalents TypeScript du moteur (`fomodParser.ts`, `fomodSession.ts`, `fomodStaging.ts`, `fomodPreview.ts`, `archiveExtractor.ts` via libarchive.js en WebAssembly).
 - `packaging/fOMODSIM.spec` : PyInstaller, chemins calculés depuis `SPECPATH`.
 - `docs/` : README FR/EN, `LINUX_PORT.md`, `NEXUS_PAGE.md`, captures.
 - `_ARCHIVES/` : versions de référence (v1.0.0), non versionné. Ne pas y toucher.
@@ -70,7 +70,7 @@ cd web && npm run build                   # sortie dans ../dist (racine du proje
 
 ## Pistes ouvertes
 
-- **Migration web inachevée** : `fomodParser.ts` et `fomodSession.ts` sont à jour, mais `App.tsx` (états `selections`/`activeFlags`, `initSelections`, navigation, compteur d'étapes) et `fomodStaging.ts` (dossier isolé, source vide, `forcedItems`, `isFolder` des fichiers requis) utilisent encore l'ancienne logique : l'interface web ignore `<visible>`. Reproduire aussi l'aperçu tiré des fichiers de l'option (DDS non lisible nativement par le navigateur).
+- **Aperçus web** : `fomodPreview.ts` reprend `preview.py` mais ignore les textures `.dds`/`.tga` (illisibles par le navigateur) ; une option sans autre image retombe sur la bannière ou le visuel généré.
 
 - `npm audit` signalait 1 vulnérabilité haute non examinée.
 - La fiche Nexus (`docs/NEXUS_PAGE.md`) est en Markdown : Nexus attend du BBCode, et les champs auteur et licence sont à compléter.

@@ -49,6 +49,7 @@ export interface Translations {
     loadDemoAction: string;
     prevStep: string;
     nextStep: string;
+    finishStep: string;
     autoDetected: string;
   };
   preview: {

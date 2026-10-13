@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   FomodStep,
   FomodGroup,
@@ -18,6 +18,19 @@ import {
   findFileInIndex,
   isOptionRecommended,
 } from './utils/fomodParser';
+import {
+  SessionState,
+  initialState,
+  toggleOption,
+  activeFlags as computeActiveFlags,
+  flagsBefore,
+  visibleStepIndices,
+  selectedOptions as computeSelectedOptions,
+  forcedItems as computeForcedItems,
+  isLocked,
+  optionType,
+} from './utils/fomodSession';
+import { pickPreviewEntry } from './utils/fomodPreview';
 import { extractAnyArchive, reanchorIndex, selectFomodXml } from './utils/archiveExtractor';
 import {
   buildStaging,
@@ -61,13 +74,8 @@ export default function App() {
   const [requiredFiles, setRequiredFiles] = useState<(FomodFileItem | FomodFolderItem)[]>([]);
   const [conditionalFileInstalls, setConditionalFileInstalls] = useState<ConditionalInstallPattern[]>([]);
 
-  // Selections state: map of stepId -> record of groupId -> single string or array of strings
-  const [selections, setSelections] = useState<
-    Record<string, Record<string, string | string[]>>
-  >({});
-
-  // Active flags collected from selected options
-  const [activeFlags, setActiveFlags] = useState<Record<string, string>>({});
+  // Session d'installation : options cochées et étapes modifiées à la main (voir fomodSession.ts)
+  const [session, setSession] = useState<SessionState>({ selected: new Set(), touchedSteps: new Set() });
 
   // Preview state (Right column)
   const [previewDesc, setPreviewDesc] = useState<string>('Description');
@@ -79,6 +87,16 @@ export default function App() {
   const [dataDirPath, setDataDirPath] = useState<string | null>(null);
   const [installedBasenames, setInstalledBasenames] = useState<Set<string>>(new Set());
   const [dataModalOpen, setDataModalOpen] = useState<boolean>(false);
+
+  // Valeurs dérivées de la session : flags actifs et étapes visibles
+  const activeFlags = useMemo(
+    () => computeActiveFlags(steps, session.selected, installedBasenames),
+    [steps, session, installedBasenames]
+  );
+  const visibleSteps = useMemo(
+    () => visibleStepIndices(steps, session.selected, installedBasenames),
+    [steps, session, installedBasenames]
+  );
 
   // Staging
   const [stagingDirPath, setStagingDirPath] = useState<string>('Bureau (Desktop)');
@@ -127,8 +145,7 @@ export default function App() {
     setSteps([]);
     setModName('');
     setRequiredFiles([]);
-    setSelections({});
-    setActiveFlags({});
+    setSession({ selected: new Set(), touchedSteps: new Set() });
     setCurrentStepIdx(0);
     setPreviewImgUrl(null);
     setPreviewDesc('Description');
@@ -154,29 +171,8 @@ export default function App() {
     setCurrentHoveredOption(opt);
     setPreviewDesc(opt.description || '(aucune description)');
 
-    let resolvedUrl: string | null = null;
-
-    // 1. Chercher l'image spécifiée sur l'option
-    if (opt.imagePath && index) {
-      const entry = findFileInIndex(index, opt.imagePath);
-      if (entry) {
-        if (!entry.url && entry.blob) {
-          try { entry.url = URL.createObjectURL(entry.blob); } catch {}
-        }
-        if (entry.url) resolvedUrl = entry.url;
-      }
-    }
-
-    // 2. Si non trouvée, chercher dans l'archive indexée si un fichier image correspond au nom de l'option
-    if (!resolvedUrl && opt.name && index) {
-      const entry = findFileInIndex(index, opt.name);
-      if (entry && entry.path.toLowerCase().match(/\.(jpe?g|png|bmp|webp|svg)$/i)) {
-        if (!entry.url && entry.blob) {
-          try { entry.url = URL.createObjectURL(entry.blob); } catch {}
-        }
-        if (entry.url) resolvedUrl = entry.url;
-      }
-    }
+    // 1. Image propre à l'option, sinon tirée de ses fichiers, sinon bannière partagée
+    let resolvedUrl: string | null = pickPreviewEntry(index, opt, group)?.url || null;
 
     // 3. Fallback sur l'image d'en-tête du groupe, de l'étape ou du module si l'option n'en possède pas
     if (!resolvedUrl && group?.headerImage && index) {
@@ -212,11 +208,13 @@ export default function App() {
   // Synchroniser l'aperçu lors du changement d'étape
   useEffect(() => {
     if (steps.length > 0 && steps[currentStepIdx]) {
+      // Option cochée de l'étape, sinon la première
       const curStep = steps[currentStepIdx];
-      const curGrp = curStep.groups[0];
-      const firstOpt = curGrp?.options[0];
-      if (firstOpt) {
-        updateOptionPreview(firstOpt, curStep, curGrp, archiveIndex, moduleHeaderImage);
+      const target =
+        curStep.groups.flatMap(g => g.options).find(o => session.selected.has(o.id)) || curStep.groups[0]?.options[0];
+      const curGrp = curStep.groups.find(g => g.options.some(o => o.id === target?.id)) || null;
+      if (target) {
+        updateOptionPreview(target, curStep, curGrp, archiveIndex, moduleHeaderImage);
       }
     }
   }, [currentStepIdx]);
@@ -235,14 +233,14 @@ export default function App() {
       setConditionalFileInstalls(parsedConfig.conditionalFileInstalls || []);
       setMetadata(parsedInfo);
       setArchiveIndex(index);
-      setCurrentStepIdx(0);
       setModuleHeaderImage(parsedConfig.moduleHeaderImage);
 
-      initSelections(parsedConfig.steps, index, installedBasenames, false);
+      const firstIdx = initSelections(parsedConfig.steps, installedBasenames);
+      setCurrentStepIdx(firstIdx);
 
-      const firstOpt = parsedConfig.steps[0]?.groups[0]?.options[0];
-      const firstGrp = parsedConfig.steps[0]?.groups[0];
-      const firstStep = parsedConfig.steps[0];
+      const firstStep = parsedConfig.steps[firstIdx];
+      const firstGrp = firstStep?.groups[0];
+      const firstOpt = firstGrp?.options[0];
       if (firstOpt) {
         updateOptionPreview(firstOpt, firstStep, firstGrp, index, parsedConfig.moduleHeaderImage);
       } else {
@@ -255,68 +253,13 @@ export default function App() {
     }
   };
 
-  // --- INITIALISATION PRÉ-SÉLECTIONS ---
-  const initSelections = (
-    stepList: FomodStep[],
-    index: ArchiveIndex,
-    installed: Set<string>,
-    preserveManual: boolean = false
-  ) => {
-    const initial: Record<string, Record<string, string | string[]>> = preserveManual ? { ...selections } : {};
-    const flags: Record<string, string> = preserveManual ? { ...activeFlags } : {};
-
-    stepList.forEach((step) => {
-      if (!initial[step.id]) initial[step.id] = {};
-      step.groups.forEach((grp) => {
-        const isSingle = grp.type === 'SelectExactlyOne' || grp.type === 'SelectAtMostOne';
-        if (isSingle) {
-          let chosen: FomodOption | undefined;
-          for (const opt of grp.options) {
-            if (isOptionRecommended(opt, installed, flags)) {
-              chosen = opt;
-              break;
-            }
-          }
-          if (!chosen) {
-            for (const opt of grp.options) {
-              const rec = typeof opt.typeDescriptor === 'string' ? opt.typeDescriptor.toLowerCase() : '';
-              if (rec === 'recommended') {
-                chosen = opt;
-                break;
-              }
-            }
-          }
-          if (!chosen && grp.type === 'SelectExactlyOne' && grp.options.length > 0) {
-            chosen = grp.options[0];
-          }
-
-          if (chosen) {
-            if (!preserveManual || !initial[step.id][grp.id] || initial[step.id][grp.id] === '__none__') {
-              initial[step.id][grp.id] = chosen.name;
-              Object.assign(flags, chosen.flags);
-            }
-          } else if (!preserveManual) {
-            initial[step.id][grp.id] = '__none__';
-          }
-        } else {
-          const currentSelected = new Set<string>(
-            preserveManual && Array.isArray(initial[step.id][grp.id])
-              ? (initial[step.id][grp.id] as string[])
-              : []
-          );
-          grp.options.forEach((opt) => {
-            if (isOptionRecommended(opt, installed, flags)) {
-              currentSelected.add(opt.name);
-              Object.assign(flags, opt.flags);
-            }
-          });
-          initial[step.id][grp.id] = Array.from(currentSelected);
-        }
-      });
-    });
-
-    setSelections(initial);
-    setActiveFlags(flags);
+  // --- INITIALISATION DE LA SESSION ---
+  /** Choix par défaut de toutes les étapes ; renvoie l'index de la première étape visible. */
+  const initSelections = (stepList: FomodStep[], installed: Set<string>): number => {
+    const st = initialState(stepList, installed);
+    setSession(st);
+    const vis = visibleStepIndices(stepList, st.selected, installed);
+    return vis[0] ?? 0;
   };
 
   // --- TRAITEMENT DOSSIER LOCAL / DÉCOMPRESSÉ ---
@@ -402,14 +345,14 @@ export default function App() {
       setConditionalFileInstalls(parsedConfig.conditionalFileInstalls || []);
       setMetadata(parsedInfo);
       setArchiveIndex(newIndex);
-      setCurrentStepIdx(0);
       setModuleHeaderImage(parsedConfig.moduleHeaderImage);
 
-      initSelections(parsedConfig.steps, newIndex, installedBasenames);
+      const firstIdx = initSelections(parsedConfig.steps, installedBasenames);
+      setCurrentStepIdx(firstIdx);
 
-      const firstOpt = parsedConfig.steps[0]?.groups[0]?.options[0];
-      const firstGrp = parsedConfig.steps[0]?.groups[0];
-      const firstStep = parsedConfig.steps[0];
+      const firstStep = parsedConfig.steps[firstIdx];
+      const firstGrp = firstStep?.groups[0];
+      const firstOpt = firstGrp?.options[0];
       if (firstOpt) {
         updateOptionPreview(firstOpt, firstStep, firstGrp, newIndex, parsedConfig.moduleHeaderImage);
       } else {
@@ -461,14 +404,14 @@ export default function App() {
       setConditionalFileInstalls(parsedConfig.conditionalFileInstalls || []);
       setMetadata(parsedInfo);
       setArchiveIndex(index);
-      setCurrentStepIdx(0);
       setModuleHeaderImage(parsedConfig.moduleHeaderImage);
 
-      initSelections(parsedConfig.steps, index, installedBasenames);
+      const firstIdx = initSelections(parsedConfig.steps, installedBasenames);
+      setCurrentStepIdx(firstIdx);
 
-      const firstOpt = parsedConfig.steps[0]?.groups[0]?.options[0];
-      const firstGrp = parsedConfig.steps[0]?.groups[0];
-      const firstStep = parsedConfig.steps[0];
+      const firstStep = parsedConfig.steps[firstIdx];
+      const firstGrp = firstStep?.groups[0];
+      const firstOpt = firstGrp?.options[0];
       if (firstOpt) {
         updateOptionPreview(firstOpt, firstStep, firstGrp, index, parsedConfig.moduleHeaderImage);
       } else {
@@ -617,98 +560,18 @@ export default function App() {
   };
 
   // --- GESTION DES CLICS OPTIONS ---
-  const handleSelectRadio = (stepId: string, groupId: string, optionName: string) => {
-    setSelections((prev) => ({
-      ...prev,
-      [stepId]: {
-        ...(prev[stepId] || {}),
-        [groupId]: optionName,
-      },
-    }));
-    updateActiveFlags(stepId, groupId, optionName, true);
-    const step = steps.find((s) => s.id === stepId);
-    const grp = step?.groups.find((g) => g.id === groupId);
-    const opt = grp?.options.find((o) => o.name === optionName);
-    if (opt) handleHoverOption(opt);
-  };
-
-  const handleToggleCheck = (stepId: string, groupId: string, optionName: string) => {
-    setSelections((prev) => {
-      const currentList = (prev[stepId]?.[groupId] as string[]) || [];
-      const isSelected = currentList.includes(optionName);
-      const nextList = isSelected
-        ? currentList.filter((n) => n !== optionName)
-        : [...currentList, optionName];
-
-      return {
-        ...prev,
-        [stepId]: {
-          ...(prev[stepId] || {}),
-          [groupId]: nextList,
-        },
-      };
-    });
-    updateActiveFlags(stepId, groupId, optionName, false);
-    const step = steps.find((s) => s.id === stepId);
-    const grp = step?.groups.find((g) => g.id === groupId);
-    const opt = grp?.options.find((o) => o.name === optionName);
-    if (opt) handleHoverOption(opt);
-  };
-
-  const updateActiveFlags = (
-    stepId: string,
-    groupId: string,
-    optionName: string,
-    isRadio: boolean
-  ) => {
-    const step = steps.find((s) => s.id === stepId);
-    const grp = step?.groups.find((g) => g.id === groupId);
-    const opt = grp?.options.find((o) => o.name === optionName);
-    if (!opt) return;
-
-    setActiveFlags((prev) => {
-      const next = { ...prev };
-      if (isRadio) {
-        grp?.options.forEach((o) => {
-          Object.keys(o.flags).forEach((k) => delete next[k]);
-        });
-      }
-      Object.assign(next, opt.flags);
-      return next;
-    });
-  };
-
-  const collectSelectedOptions = (): FomodOption[] => {
-    const list: FomodOption[] = [];
-
-    steps.forEach((step) => {
-      const stepSel = selections[step.id] || {};
-      step.groups.forEach((grp) => {
-        const val = stepSel[grp.id];
-        if (grp.type === 'SelectExactlyOne') {
-          if (typeof val === 'string' && val !== '__none__') {
-            const opt = grp.options.find((o) => o.name === val);
-            if (opt) list.push(opt);
-          }
-        } else {
-          if (Array.isArray(val)) {
-            val.forEach((name) => {
-              const opt = grp.options.find((o) => o.name === name);
-              if (opt) list.push(opt);
-            });
-          }
-        }
-      });
-    });
-
-    return list;
+  /** Bascule une option selon les règles du groupe ; un clic refusé ne change que l'aperçu. */
+  const handleSelectOption = (opt: FomodOption, group: FomodGroup) => {
+    const next = toggleOption(steps, session, installedBasenames, opt, group);
+    if (next) setSession(next);
+    handleHoverOption(opt);
   };
 
   // Générateur de Staging : COPIE PHYSIQUE DIRECTE DANS LE RÉPERTOIRE SÉLECTIONNÉ
   // Les fichiers sont écrits directement dans le dossier choisi (pas de sous-dossier "Staging").
   const handleGenerateStaging = async () => {
-    const selectedOpts = collectSelectedOptions();
-    if (selectedOpts.length === 0) {
+    const selectedOpts = computeSelectedOptions(steps, session.selected, installedBasenames);
+    if (selectedOpts.length === 0 && requiredFiles.length === 0) {
       alert('Avertissement : Aucune option sélectionnée.');
       return;
     }
@@ -720,7 +583,8 @@ export default function App() {
       stagingDirPath,
       conditionalFileInstalls,
       activeFlags,
-      installedBasenames
+      installedBasenames,
+      computeForcedItems(steps, session.selected, installedBasenames)
     );
     setStagingResult(res);
     setDirectWriteSuccess(false);
@@ -778,55 +642,32 @@ export default function App() {
     setFolderSelectModalOpen(true);
   };
 
-  // Navigation
+  // Navigation : seules les étapes visibles sont parcourues
+  const stepPos = visibleSteps.indexOf(currentStepIdx);
+  const stepNum = stepPos >= 0 ? stepPos + 1 : visibleSteps.length > 0 ? 1 : 0;
+  const totalSteps = visibleSteps.length;
   const currentStep = steps[currentStepIdx];
-  const isFirstStep = currentStepIdx <= 0;
-  const isLastStep = currentStepIdx >= steps.length - 1;
+  const isFirstStep = stepNum <= 1;
+  const isLastStep = totalSteps === 0 || currentStepIdx >= visibleSteps[totalSteps - 1];
+
+  // Étape devenue invisible après un changement de choix : se replacer sur la plus proche
+  useEffect(() => {
+    if (visibleSteps.length === 0 || visibleSteps.includes(currentStepIdx)) return;
+    const earlier = visibleSteps.filter(i => i < currentStepIdx);
+    setCurrentStepIdx(earlier.length ? earlier[earlier.length - 1] : visibleSteps[0]);
+  }, [visibleSteps, currentStepIdx]);
+
+  const goToStep = (idx: number) => setCurrentStepIdx(idx);
 
   const handleNextStep = () => {
-    if (!isLastStep) {
-      const nextIdx = currentStepIdx + 1;
-      setCurrentStepIdx(nextIdx);
-      const nextS = steps[nextIdx];
-      if (nextS) {
-        let selOpt: FomodOption | null = null;
-        const stepSel = selections[nextS.id] || {};
-        for (const grp of nextS.groups) {
-          const val = stepSel[grp.id];
-          if (typeof val === 'string' && val !== '__none__') {
-            selOpt = grp.options.find((o) => o.name === val) || null;
-            if (selOpt) break;
-          } else if (Array.isArray(val) && val.length > 0) {
-            selOpt = grp.options.find((o) => o.name === val[0]) || null;
-            if (selOpt) break;
-          }
-        }
-        handleHoverOption(selOpt || nextS.groups[0]?.options[0]);
-      }
-    }
+    const later = visibleSteps.filter(i => i > currentStepIdx);
+    if (later.length) goToStep(later[0]);
+    else handleGenerateStaging();
   };
 
   const handlePrevStep = () => {
-    if (!isFirstStep) {
-      const prevIdx = currentStepIdx - 1;
-      setCurrentStepIdx(prevIdx);
-      const prevS = steps[prevIdx];
-      if (prevS) {
-        let selOpt: FomodOption | null = null;
-        const stepSel = selections[prevS.id] || {};
-        for (const grp of prevS.groups) {
-          const val = stepSel[grp.id];
-          if (typeof val === 'string' && val !== '__none__') {
-            selOpt = grp.options.find((o) => o.name === val) || null;
-            if (selOpt) break;
-          } else if (Array.isArray(val) && val.length > 0) {
-            selOpt = grp.options.find((o) => o.name === val[0]) || null;
-            if (selOpt) break;
-          }
-        }
-        handleHoverOption(selOpt || prevS.groups[0]?.options[0]);
-      }
-    }
+    const earlier = visibleSteps.filter(i => i < currentStepIdx);
+    if (earlier.length) goToStep(earlier[earlier.length - 1]);
   };
 
   // Resizable Panes logic (Sash drag)
@@ -986,7 +827,7 @@ export default function App() {
               </button>
               <span className="text-[#555]">|</span>
               <span>
-                {strings.common.step} {currentStepIdx + 1} / {steps.length}
+                {strings.common.step} {stepNum} / {totalSteps}
               </span>
               <span className="text-[#555]">|</span>
               <span className="text-[#aaa] text-[11px]">
@@ -1223,7 +1064,7 @@ export default function App() {
                       {currentStep.derivedLabel}
                     </h2>
                     <span className="text-[11px] text-[#888] font-mono">
-                      {currentStepIdx + 1} / {steps.length}
+                      {stepNum} / {totalSteps}
                     </span>
                   </div>
                 </div>
@@ -1231,8 +1072,8 @@ export default function App() {
                 {/* Groups */}
                 <div className="space-y-4">
                   {currentStep.groups.map((group) => {
-                    const isSingle = group.type === 'SelectExactlyOne';
-                    const currentVal = selections[currentStep.id]?.[group.id];
+                    const isSingle = group.type === 'SelectExactlyOne' || group.type === 'SelectAtMostOne';
+                    const stepFlags = flagsBefore(steps, session.selected, installedBasenames, currentStepIdx);
 
                     return (
                       <div
@@ -1250,26 +1091,22 @@ export default function App() {
                         {/* Group Options */}
                         <div className="space-y-1.5">
                           {group.options.map((opt) => {
-                            const isSelected = isSingle
-                              ? currentVal === opt.name
-                              : Array.isArray(currentVal) && currentVal.includes(opt.name);
+                            const isSelected = session.selected.has(opt.id);
+                            const locked = isLocked(steps, session.selected, installedBasenames, opt, group);
+                            const notUsable =
+                              optionType(steps, session.selected, installedBasenames, opt).toLowerCase() === 'notusable';
 
                             // Dependency auto-select match indicator
-                            const matchesDep = isOptionRecommended(opt, installedBasenames, activeFlags);
+                            const matchesDep = isOptionRecommended(opt, installedBasenames, stepFlags);
 
                             return (
                               <div
                                 key={opt.id}
                                 onMouseEnter={() => handleHoverOption(opt)}
-                                onClick={() => {
-                                  handleHoverOption(opt);
-                                  if (isSingle) {
-                                    handleSelectRadio(currentStep.id, group.id, opt.name);
-                                  } else {
-                                    handleToggleCheck(currentStep.id, group.id, opt.name);
-                                  }
-                                }}
-                                className={`flex items-start gap-2.5 px-2 py-1.5 rounded cursor-pointer transition-colors ${
+                                onClick={() => handleSelectOption(opt, group)}
+                                className={`flex items-start gap-2.5 px-2 py-1.5 rounded transition-colors ${
+                                  locked ? 'cursor-default' : 'cursor-pointer'
+                                } ${notUsable && !isSelected ? 'opacity-40' : ''} ${
                                   isSelected
                                     ? 'bg-[#2a2a2a] text-white'
                                     : 'hover:bg-[#282828] text-[#ccc]'
@@ -1343,10 +1180,10 @@ export default function App() {
 
             <button
               onClick={handleNextStep}
-              disabled={isLastStep || steps.length === 0}
+              disabled={totalSteps === 0}
               className="flex-1 py-2.5 px-4 bg-[#0ea5e9] hover:bg-[#0284c7] disabled:opacity-40 disabled:hover:bg-[#0ea5e9] text-white font-bold text-xs uppercase tracking-wide rounded transition-colors cursor-pointer disabled:cursor-not-allowed text-center"
             >
-              {strings.steps.nextStep}
+              {isLastStep ? strings.steps.finishStep : strings.steps.nextStep}
             </button>
           </div>
         </div>
@@ -1423,7 +1260,7 @@ export default function App() {
         onApplyData={(path, plugins) => {
           setDataDirPath(path);
           setInstalledBasenames(plugins);
-          initSelections(steps, archiveIndex, plugins, true);
+          initSelections(steps, plugins);
         }}
       />
 

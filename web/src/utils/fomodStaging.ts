@@ -7,8 +7,9 @@ import {
   FomodFileItem,
   FomodFolderItem,
   ConditionalInstallPattern,
+  VirtualFileEntry,
 } from '../types/fomod';
-import { findFileInIndex, findFolderInIndex, norm, evaluateDependencies } from './fomodParser';
+import { findFileInIndex, findFolderInIndex, norm, evaluateDependencies, isFolderItem } from './fomodParser';
 
 /**
  * Calcule le chemin de destination normalisé pour un fichier extrait via FOMOD.
@@ -69,13 +70,42 @@ export function buildStaging(
   stagingDirName: string = 'Staging',
   conditionalInstalls?: ConditionalInstallPattern[],
   activeFlags?: Record<string, string>,
-  installedBasenames?: Set<string>
+  installedBasenames?: Set<string>,
+  forcedItems?: { item: FomodFileItem | FomodFolderItem; isFolder: boolean; optionName: string }[]
 ): StagingResult {
   const log: string[] = [];
   const itemsMap = new Map<string, StagingItem>(); // dest lower -> item
   let copied = 0;
   let missing = 0;
   let totalSize = 0;
+
+  /** Ajoute un fichier au staging ; une priorité inférieure ne remplace pas l'existant. */
+  const stage = (entry: VirtualFileEntry, target: string, optName: string, priority: number): boolean => {
+    const targetLower = target.toLowerCase();
+    const existing = itemsMap.get(targetLower);
+    if (existing && priority < (existing.priority || 0)) {
+      log.push(`  [ignoré] ${entry.path} -> ${target} (prio ${priority} < ${existing.priority})`);
+      return false;
+    }
+    const sz = entry.size || entry.data?.length || 1024;
+    if (!existing) {
+      copied++;
+      totalSize += sz;
+    } else {
+      totalSize += sz - existing.size;
+    }
+    log.push(`  [+ fichier] ${entry.path} -> ${target} (prio: ${priority})`);
+    itemsMap.set(targetLower, {
+      sourcePath: entry.path,
+      destinationPath: target,
+      type: 'file',
+      size: sz,
+      matchedFromOption: optName,
+      priority,
+      blob: entry.blob,
+    });
+    return true;
+  };
 
   const processNode = (
     tag: 'file' | 'folder',
@@ -87,163 +117,84 @@ export function buildStaging(
     const src = norm(rawSrc);
     const srcFile = findFileInIndex(archiveIndex, src);
     const srcDir = findFolderInIndex(archiveIndex, src);
+    const cleanDst = norm(rawDst).replace(/^\/+/, '').replace(/\/+$/, '');
 
-    const copyFolderFiles = (dirPath: string) => {
+    // Uniquement le contenu de CE dossier (pas d'un homonyme ailleurs dans l'archive) ;
+    // la racine du mod (source vide) n'inclut pas l'installeur lui-même.
+    const copyFolderFiles = (dirPath: string): number => {
       let subCopied = 0;
       const dirLower = dirPath.toLowerCase().replace(/\/+$/, '');
-      const dirLowerSlash = dirLower + '/';
-
+      const prefix = dirLower ? dirLower + '/' : '';
       for (const [key, entry] of archiveIndex.files.entries()) {
         if (entry.isDir || key.includes('__macosx')) continue;
-
-        // Vérifier si le fichier se trouve dans ce dossier ou sous-dossier
-        let matched = false;
-        let relativeInside = '';
-
-        if (key.startsWith(dirLowerSlash)) {
-          matched = true;
-          relativeInside = entry.path.slice(dirPath.length).replace(/^\/+/, '');
-        } else if (key.includes('/' + dirLowerSlash)) {
-          const idx = key.indexOf('/' + dirLowerSlash);
-          matched = true;
-          const matchedPrefixLen = idx + 1 + dirPath.length;
-          relativeInside = entry.path.slice(matchedPrefixLen).replace(/^\/+/, '');
-        }
-
-        if (matched) {
-          const cleanDst = norm(rawDst).replace(/^\/+/, '').replace(/\/+$/, '');
-          const target = cleanDst
-            ? (relativeInside ? norm(`${cleanDst}/${relativeInside}`) : cleanDst)
-            : relativeInside || entry.path.split('/').pop() || 'file';
-
-          const targetLower = target.toLowerCase();
-          const existing = itemsMap.get(targetLower);
-          if (!existing || priority >= (existing.priority || 0)) {
-            const sz = entry.size || 1024;
-            if (!existing) {
-              totalSize += sz;
-              copied++;
-            }
-            log.push(`  [+ fichier] ${entry.path} -> ${target} (priorité ${priority})`);
-            itemsMap.set(targetLower, {
-              sourcePath: entry.path,
-              destinationPath: target,
-              type: 'file',
-              size: sz,
-              matchedFromOption: optName,
-              priority,
-              blob: entry.blob,
-            });
-            subCopied++;
-          }
-        }
+        if (prefix && !key.startsWith(prefix)) continue;
+        if (!prefix && key.startsWith('fomod/')) continue;
+        const relativeInside = entry.path.slice(prefix.length).replace(/^\/+/, '');
+        const target = cleanDst
+          ? (relativeInside ? norm(`${cleanDst}/${relativeInside}`) : cleanDst)
+          : relativeInside || entry.path.split('/').pop() || 'file';
+        if (stage(entry, target, optName, priority)) subCopied++;
       }
       return subCopied;
     };
 
-    if (tag === 'file') {
-      if (srcFile) {
-        const cleanDst = resolveFileDestination(rawDst, srcFile.path);
-        const cleanDstLower = cleanDst.toLowerCase();
-        const existing = itemsMap.get(cleanDstLower);
-        if (!existing || priority >= (existing.priority || 0)) {
-          const sz = srcFile.size || 1024;
-          if (!existing) {
-            totalSize += sz;
-            copied++;
-          }
-          log.push(`  [+ fichier] ${srcFile.path} -> ${cleanDst} (priorité ${priority})`);
-          itemsMap.set(cleanDstLower, {
-            sourcePath: srcFile.path,
-            destinationPath: cleanDst,
-            type: 'file',
-            size: sz,
-            matchedFromOption: optName,
-            priority,
-            blob: srcFile.blob,
-          });
-        }
-      } else if (srcDir) {
-        // Cas d'arborescence : balise <file> mais pointant vers un dossier
-        const subCopied = copyFolderFiles(srcDir);
-        log.push(`  [+ dossier] ${srcDir} -> ${rawDst || '.'} (${subCopied} fichier(s))`);
-      } else {
-        missing++;
-        log.push(`  [manquant] (fichier) ${src}`);
-      }
+    const stageFile = (entry: VirtualFileEntry) =>
+      stage(entry, resolveFileDestination(rawDst, entry.path), optName, priority);
+
+    if (tag === 'file' && srcFile) {
+      stageFile(srcFile);
+    } else if (srcDir !== null) {
+      // <folder>, ou <file> pointant vers un dossier
+      const subCopied = copyFolderFiles(srcDir);
+      log.push(`  [+ dossier] ${srcDir || '.'} -> ${rawDst || '.'} (${subCopied} fichier(s))`);
+    } else if (srcFile) {
+      // <folder> pointant vers un fichier individuel
+      stageFile(srcFile);
     } else {
-      // tag === 'folder'
-      if (srcDir) {
-        const subCopied = copyFolderFiles(srcDir);
-        log.push(`  [+ dossier] ${srcDir} -> ${rawDst || '.'} (${subCopied} fichier(s))`);
-      } else if (srcFile) {
-        // Balise <folder> mais pointant vers un fichier individuel
-        const cleanDst = resolveFileDestination(rawDst, srcFile.path);
-        const cleanDstLower = cleanDst.toLowerCase();
-        const existing = itemsMap.get(cleanDstLower);
-        if (!existing || priority >= (existing.priority || 0)) {
-          const sz = srcFile.size || 1024;
-          if (!existing) {
-            totalSize += sz;
-            copied++;
-          }
-          log.push(`  [+ fichier] ${srcFile.path} -> ${cleanDst} (priorité ${priority})`);
-          itemsMap.set(cleanDstLower, {
-            sourcePath: srcFile.path,
-            destinationPath: cleanDst,
-            type: 'file',
-            size: sz,
-            matchedFromOption: optName,
-            priority,
-            blob: srcFile.blob,
-          });
-        }
-      } else {
-        missing++;
-        log.push(`  [manquant] (dossier) ${src}`);
-      }
+      missing++;
+      log.push(`  [manquant] (${tag === 'file' ? 'fichier' : 'dossier'}) ${src}`);
     }
   };
 
-  // Traiter les fichiers requis (requiredInstallFiles)
+  const processItem = (item: FomodFileItem | FomodFolderItem, isFolder: boolean, optName: string) =>
+    processNode(isFolder ? 'folder' : 'file', item.source, item.destination, optName, item.priority || 0);
+
+  // 1. Fichiers requis (requiredInstallFiles)
   if (requiredFiles.length > 0) {
-    log.push('\n[Fichiers Requis (requiredInstallFiles)]');
-    for (const req of requiredFiles) {
-      processNode('source' in req ? 'file' : 'folder', req.source, req.destination, 'Requis', req.priority || 0);
-    }
+    log.push('[Fichiers Requis (requiredInstallFiles)]');
+    for (const req of requiredFiles) processItem(req, isFolderItem(req), 'Requis');
   }
 
-  // Traiter toutes les options sélectionnées
+  // 2. Options sélectionnées
   for (const opt of selectedOptions) {
     log.push(`\n[${opt.name}]`);
-    for (const file of opt.files) {
-      processNode('file', file.source, file.destination, opt.name, file.priority || 0);
-    }
-    for (const folder of opt.folders) {
-      processNode('folder', folder.source, folder.destination, opt.name, folder.priority || 0);
-    }
+    opt.files.forEach(f => processItem(f, false, opt.name));
+    opt.folders.forEach(f => processItem(f, true, opt.name));
   }
 
-  // Installations conditionnelles globales (conditionalFileInstalls)
+  // 2 bis. Fichiers installés même sans sélection (alwaysInstall / installIfUsable)
+  if (forcedItems && forcedItems.length > 0) {
+    log.push('\n[Fichiers toujours installés (alwaysInstall / installIfUsable)]');
+    for (const f of forcedItems) processItem(f.item, f.isFolder, f.optionName);
+  }
+
+  // 3. Installations conditionnelles (conditionalFileInstalls)
   if (conditionalInstalls && conditionalInstalls.length > 0) {
     const flags = activeFlags || {};
     const instFiles = installedBasenames || new Set<string>();
     log.push('\n[Installations Conditionnelles (conditionalFileInstalls)]');
-    for (const cPat of conditionalInstalls) {
-      if (evaluateDependencies(cPat.dependencies, instFiles, flags)) {
-        for (const file of cPat.files) {
-          processNode('file', file.source, file.destination, 'Conditionnel', file.priority || 0);
-        }
-        for (const folder of cPat.folders) {
-          processNode('folder', folder.source, folder.destination, 'Conditionnel', folder.priority || 0);
-        }
-      }
-    }
+    conditionalInstalls.forEach((cPat, idx) => {
+      if (!evaluateDependencies(cPat.dependencies, instFiles, flags)) return;
+      const name = `Conditionnel #${idx + 1}`;
+      cPat.files.forEach(f => processItem(f, false, name));
+      cPat.folders.forEach(f => processItem(f, true, name));
+    });
   }
 
-  const items = Array.from(itemsMap.values());
-  const summaryLine = `\n--- Résumé ---\n${copied} fichier(s) copié(s), ${missing} manquant(s)`;
-  log.push(summaryLine);
+  const items = Array.from(itemsMap.values()).sort((a, b) =>
+    a.destinationPath.toLowerCase().localeCompare(b.destinationPath.toLowerCase())
+  );
+  log.push(`\n--- Résumé ---\n${copied} fichier(s) copié(s), ${missing} manquant(s)`);
 
   return {
     items,

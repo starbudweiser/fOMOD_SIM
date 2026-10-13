@@ -51,6 +51,7 @@ export const it: Translations = {
     loadDemoAction: 'Carica il mod di esempio CBBE',
     prevStep: 'INDIETRO',
     nextStep: 'CONTINUA',
+    finishStep: "COMPLETA INSTALLAZIONE",
     autoDetected: 'Dipendenza rilevata nella tua cartella Data',
   },
   preview: {
