@@ -16,6 +16,10 @@ class FomodFileItem:
     source: str
     destination: str
     priority: int = 0
+    # alwaysInstall : installé même si l'option n'est pas cochée (étape visible)
+    always_install: bool = False
+    # installIfUsable : installé même non coché, sauf si l'option est « NotUsable »
+    install_if_usable: bool = False
 
 
 @dataclass
@@ -23,6 +27,8 @@ class FomodFolderItem:
     source: str
     destination: str
     priority: int = 0
+    always_install: bool = False
+    install_if_usable: bool = False
 
 
 @dataclass
@@ -43,6 +49,8 @@ class FomodDependencies:
     file_dependencies: List[FileDependency] = field(default_factory=list)
     flag_dependencies: List[FlagDependency] = field(default_factory=list)
     nested_dependencies: List['FomodDependencies'] = field(default_factory=list)
+    # Conditions non simulables (version du jeu, de FOMM, de SKSE…) : considérées satisfaites
+    assumed_true: int = 0
 
 
 @dataclass
@@ -91,7 +99,8 @@ class FomodStep:
     id: str
     name: str
     groups: List[FomodGroup] = field(default_factory=list)
-    visible: bool = True
+    # Condition <visible> de l'étape (None = toujours visible)
+    visibility: Optional[FomodDependencies] = None
 
 
 @dataclass
@@ -110,6 +119,8 @@ class VirtualFileEntry:
     size: int = 0
     data: Optional[bytes] = None
     extracted_disk_path: Optional[str] = None
+    # Nom exact du membre dans l'archive (pour une lecture différée, ex. aperçu d'une texture)
+    member: Optional[str] = None
 
 
 @dataclass

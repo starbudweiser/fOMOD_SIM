@@ -3,7 +3,7 @@ import re
 import shutil
 import zipfile
 import logging
-from typing import List, Dict, Optional, Set
+from typing import List, Dict, Optional, Set, Tuple
 from .types import (
     ArchiveIndex,
     FomodOption,
@@ -49,6 +49,7 @@ def build_staging(
     conditional_installs: Optional[List[ConditionalInstallPattern]] = None,
     active_flags: Optional[Dict[str, str]] = None,
     installed_basenames: Optional[Set[str]] = None,
+    forced_items: Optional[List[Tuple[FomodFileItem | FomodFolderItem, str]]] = None,
 ) -> StagingResult:
     """Simule la copie et l'installation de tous les fichiers FOMOD sélectionnés,
     y compris les requiredInstallFiles et les conditionalFileInstalls."""
@@ -72,23 +73,19 @@ def build_staging(
             nonlocal copied, total_size
             sub_copied = 0
             dir_lower = dir_path.lower().rstrip("/")
-            dir_lower_slash = dir_lower + "/"
+            dir_lower_slash = dir_lower + "/" if dir_lower else ""
+            prefix_len = len(dir_lower_slash)
 
             for key, entry in archive_index.files.items():
                 if entry.is_dir or "__macosx" in key:
                     continue
-
-                matched = False
-                relative_inside = ""
-
-                if key.startswith(dir_lower_slash):
-                    matched = True
-                    relative_inside = entry.path[len(dir_path):].lstrip("/")
-                elif ("/" + dir_lower_slash) in key:
-                    idx = key.find("/" + dir_lower_slash)
-                    matched = True
-                    matched_prefix_len = idx + 1 + len(dir_path)
-                    relative_inside = entry.path[matched_prefix_len:].lstrip("/")
+                # Uniquement le contenu de CE dossier (pas d'un homonyme ailleurs dans l'archive)
+                if dir_lower_slash and not key.startswith(dir_lower_slash):
+                    continue
+                if not dir_lower_slash and key.startswith("fomod/"):
+                    continue  # la racine du mod n'inclut pas l'installeur lui-même
+                matched = True
+                relative_inside = entry.path[prefix_len:].lstrip("/")
 
                 if matched:
                     clean_dst = norm(raw_dst).strip("/")
@@ -160,7 +157,7 @@ def build_staging(
                 log.append(f"  [manquant] (fichier) {src}")
         else:
             # tag == 'folder'
-            if src_dir:
+            if src_dir is not None:
                 sub_copied = copy_folder_files(src_dir)
                 log.append(f"  [+ dossier] {src_dir} -> {raw_dst or '.'} ({sub_copied} fichiers)")
             elif src_file:
@@ -206,6 +203,13 @@ def build_staging(
             process_node("file", f.source, f.destination, opt.name, priority=f.priority)
         for fld in opt.folders:
             process_node("folder", fld.source, fld.destination, opt.name, priority=fld.priority)
+
+    # 2 bis. Fichiers installés même sans sélection (alwaysInstall / installIfUsable)
+    if forced_items:
+        log.append("\n[Fichiers toujours installés (alwaysInstall / installIfUsable)]")
+        for item, opt_name in forced_items:
+            tag = "file" if isinstance(item, FomodFileItem) else "folder"
+            process_node(tag, item.source, item.destination, opt_name, priority=item.priority)
 
     # 3. Installations conditionnelles (conditionalFileInstalls)
     if conditional_installs:

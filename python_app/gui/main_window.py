@@ -21,7 +21,7 @@ from PyQt6.QtWidgets import (
     QComboBox,
 )
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QPainter, QColor, QPen, QBrush, QFont, QResizeEvent
+from PyQt6.QtGui import QPainter, QColor, QPen, QBrush, QFont, QResizeEvent, QPixmap
 
 from ..fomod.types import (
     FomodStep,
@@ -39,15 +39,15 @@ from ..fomod.parser import (
     parse_module_config_xml,
     parse_info_xml,
     evaluate_dependencies,
-    compute_option_type,
-    is_option_recommended,
 )
 from ..fomod.demo_mod import get_demo_mod
-from ..fomod.staging import build_staging, export_staging_to_directory
-from .workers import ArchiveExtractWorker, StagingWorker
+from ..fomod.staging import export_staging_to_directory
+from ..fomod.session import InstallSession
+from .workers import ArchiveExtractWorker, StagingWorker, PreviewLoadWorker
+from ..fomod.preview import pick_preview_entries
 from .mod_info_dialog import ModInfoDialog
 from .modals import OpenModModal, DataDirModal, StagingResultModal, ImagePreviewModal
-from .preview_generator import get_preview_pixmap_for_path
+from .preview_generator import get_preview_pixmap_for_path, load_pixmap_safely
 
 try:
     from ..locales import get_i18n, AVAILABLE_LANGUAGES
@@ -428,9 +428,11 @@ class MainWindow(QMainWindow):
         self.required_files = []
         self.conditional_installs: List[ConditionalInstallPattern] = []
         self.current_step_idx = 0
-        self.selected_option_ids: Set[str] = set()
-        self.active_flags: Dict[str, str] = {}
+        self.session: Optional[InstallSession] = None
         self.active_preview_option: Optional[FomodOption] = None
+        self._preview_cache: Dict[str, object] = {}  # chemin -> QImage décodée
+        self._preview_worker = None
+        self._preview_pending = False
         self.current_staging_result: Optional[StagingResult] = None
         self.installed_basenames: Set[str] = set()
 
@@ -828,7 +830,7 @@ class MainWindow(QMainWindow):
         total = len(self.steps)
         if hasattr(self, "btn_prev"):
             self.btn_prev.setText(i18n.get("steps", "prevStep"))
-            is_last = (total > 0 and self.current_step_idx == total - 1)
+            is_last = total > 0 and self._is_last_step()
             self.btn_next.setText(i18n.get("steps", "finishStep") if is_last else i18n.get("steps", "nextStep"))
 
         # Colonne de droite (Aperçu / Description)
@@ -846,8 +848,7 @@ class MainWindow(QMainWindow):
             self.title_label.setText(self.metadata.name)
             self.btn_close.show()
             self.pipe1.show()
-            total_steps = len(self.steps)
-            step_num = self.current_step_idx + 1 if total_steps > 0 else 0
+            step_num, total_steps = self._step_position()
             if i18n:
                 step_str = i18n.get("header", "stepCounter", default="Étape {current} / {total}").format(
                     current=step_num, total=total_steps
@@ -882,8 +883,7 @@ class MainWindow(QMainWindow):
         self.steps.clear()
         default_name = self.i18n.get("header", "title", default="fOMODSIM") if hasattr(self, "i18n") else "fOMODSIM"
         self.metadata = FomodMetadata(name=default_name)
-        self.selected_option_ids.clear()
-        self.active_flags.clear()
+        self.session = None
         self.central_stack.setCurrentIndex(0)
         self._update_header()
 
@@ -1305,86 +1305,43 @@ class MainWindow(QMainWindow):
     # LOGIQUE D'AFFICHAGE ET D'INTERACTION
     # =========================================================================
 
+    # ------------------------------------------------------------------ session d'installation
+
+    @property
+    def selected_option_ids(self) -> Set[str]:
+        return self.session.selected if self.session else set()
+
+    @property
+    def active_flags(self) -> Dict[str, str]:
+        return self.session.active_flags if self.session else {}
+
+    def _start_session(self, steps: List[FomodStep], req_files, cond_installs) -> None:
+        self.steps = steps
+        self.required_files = req_files
+        self.conditional_installs = cond_installs
+        self.session = InstallSession(steps, req_files, cond_installs, self.installed_basenames)
+        vis = self.session.visible_step_indices()
+        self.current_step_idx = vis[0] if vis else 0
+
+    def _visible_steps(self) -> List[int]:
+        return self.session.visible_step_indices() if self.session else []
+
+    def _step_position(self) -> tuple:
+        """(position 1-based de l'étape courante parmi les étapes visibles, nombre d'étapes visibles)."""
+        vis = self._visible_steps()
+        if not vis:
+            return 0, 0
+        pos = vis.index(self.current_step_idx) + 1 if self.current_step_idx in vis else 1
+        return pos, len(vis)
+
+    def _is_last_step(self) -> bool:
+        vis = self._visible_steps()
+        return not vis or self.current_step_idx >= vis[-1]
+
     def auto_select_options_for_environment(self, preserve_manual: bool=False):
-        """Sélectionne intelligemment les options et les patches en fonction de installed_basenames et active_flags.
-        Gère les boutons radio (SelectExactlyOne, SelectAtMostOne) et les cases à cocher (SelectAny)."""
-        if not self.steps:
-            return
-
-        prev_selected = set(self.selected_option_ids) if preserve_manual else set()
-        new_selected: Set[str] = set()
-
-        for step in self.steps:
-            for grp in step.groups:
-                is_single = grp.type in (GroupType.SelectExactlyOne, GroupType.SelectAtMostOne)
-
-                if is_single:
-                    best_match: Optional[FomodOption] = None
-                    best_score = 0
-                    default_opt: Optional[FomodOption] = None
-
-                    for opt in grp.options:
-                        if opt.is_default:
-                            default_opt = opt
-
-                        if is_option_recommended(opt, self.installed_basenames, self.active_flags):
-                            score = 1
-                            if opt.dependencies and opt.dependencies.file_dependencies:
-                                score += sum(
-                                    1
-                                    for fd in opt.dependencies.file_dependencies
-                                    if fd.file.replace("\\", "/").split("/")[-1].lower() in self.installed_basenames
-                                )
-                            if opt.type_descriptor:
-                                for p in opt.type_descriptor.patterns:
-                                    if evaluate_dependencies(p.dependencies, self.installed_basenames, self.active_flags):
-                                        score += len(p.dependencies.file_dependencies) + 1
-                            if score > best_score:
-                                best_score = score
-                                best_match = opt
-
-                    if best_match:
-                        chosen = best_match
-                    elif preserve_manual and any(o.id in prev_selected for o in grp.options):
-                        chosen = next(o for o in grp.options if o.id in prev_selected)
-                    elif grp.type == GroupType.SelectExactlyOne:
-                        chosen = default_opt or (grp.options[0] if grp.options else None)
-                    else:
-                        chosen = default_opt
-
-                    if chosen:
-                        new_selected.add(chosen.id)
-                        for k, v in chosen.flags.items():
-                            self.active_flags[k] = v
-
-                else:
-                    # Choix multiple (SelectAny / SelectAll)
-                    for opt in grp.options:
-                        should_select = False
-                        if is_option_recommended(opt, self.installed_basenames, self.active_flags):
-                            should_select = True
-                        elif preserve_manual and opt.id in prev_selected:
-                            eff = compute_option_type(opt, self.installed_basenames, self.active_flags)
-                            if eff.lower() != "notusable":
-                                should_select = True
-                        elif not preserve_manual and opt.is_default:
-                            should_select = True
-
-                        if should_select:
-                            new_selected.add(opt.id)
-                            for k, v in opt.flags.items():
-                                self.active_flags[k] = v
-
-        self.selected_option_ids = new_selected
-
-        # Re-calcul propre des flags actifs
-        self.active_flags.clear()
-        for step in self.steps:
-            for grp in step.groups:
-                for opt in grp.options:
-                    if opt.id in self.selected_option_ids:
-                        for k, v in opt.flags.items():
-                            self.active_flags[k] = v
+        """Recalcule les sélections par défaut après un changement du dossier Data."""
+        if self.session:
+            self.session.set_installed_basenames(self.installed_basenames)
 
     def load_demo_mod(self, _mod_id: str="cbbe"):
         """Charge le mod de démonstration CBBE intégré."""
@@ -1397,14 +1354,7 @@ class MainWindow(QMainWindow):
 
             if mod_name:
                 self.metadata.name = mod_name
-            self.steps = steps
-            self.required_files = req_files
-            self.conditional_installs = cond_installs
-            self.current_step_idx = 0
-            self.selected_option_ids.clear()
-            self.active_flags.clear()
-
-            self.auto_select_options_for_environment(preserve_manual=False)
+            self._start_session(steps, req_files, cond_installs)
 
             self._render_current_step()
             self._trigger_background_staging()
@@ -1416,8 +1366,12 @@ class MainWindow(QMainWindow):
 
     def _render_current_step(self):
         """Affiche les options de l'étape courante dans la colonne centrale."""
-        total_steps = len(self.steps)
-        step_num = self.current_step_idx + 1 if total_steps > 0 else 0
+        vis = self._visible_steps()
+        if vis and self.current_step_idx not in vis:
+            # Étape devenue invisible après un changement de choix : on se replace sur la plus proche
+            earlier = [i for i in vis if i < self.current_step_idx]
+            self.current_step_idx = earlier[-1] if earlier else vis[0]
+        step_num, total_steps = self._step_position()
 
         self.step_counter_label.setText(
             self.i18n.get("header", "stepCounter", default="Étape {current} / {total}").format(
@@ -1427,12 +1381,12 @@ class MainWindow(QMainWindow):
         self.step_index_label.setText(f"{step_num} / {total_steps}")
 
         # Activation / Désactivation des boutons Précédent & Suivant
-        self.btn_prev.setEnabled(self.current_step_idx > 0)
-        self.btn_next.setEnabled(self.current_step_idx < total_steps - 1)
+        self.btn_prev.setEnabled(step_num > 1)
+        self.btn_next.setEnabled(total_steps > 0)
         self.btn_prev.setText(self.i18n.get("steps", "prevStep", default="← RETOUR"))
         self.btn_next.setText(
             self.i18n.get("steps", "finishStep", default="TERMINER")
-            if self.current_step_idx == total_steps - 1
+            if self._is_last_step()
             else self.i18n.get("steps", "nextStep", default="CONTINUER")
         )
 
@@ -1485,7 +1439,7 @@ class MainWindow(QMainWindow):
 
                 is_sel = opt.id in self.selected_option_ids
                 matches_dep = check_option_matches_installed_dependency(
-                    opt, self.installed_basenames, self.active_flags
+                    opt, self.installed_basenames, self.session.flags_before(self.current_step_idx)
                 )
 
                 row = OptionRowWidget(
@@ -1519,17 +1473,64 @@ class MainWindow(QMainWindow):
 
         self._update_header()
 
+    def _group_of(self, option: FomodOption) -> Optional[FomodGroup]:
+        for step in self.steps:
+            for grp in step.groups:
+                if any(o.id == option.id for o in grp.options):
+                    return grp
+        return None
+
+    def _preview_pixmap(self, option: FomodOption) -> QPixmap:
+        """Image déclarée propre à l'option, sinon image tirée des fichiers qu'elle installe
+        (chargée en arrière-plan si besoin), sinon bannière partagée ou visuel généré."""
+        primary, fallback = pick_preview_entries(self.archive_index, option, self._group_of(option))
+        for entry in (primary, fallback):
+            if entry is None:
+                continue
+            key = entry.path.lower()
+            if key in self._preview_cache:
+                return QPixmap.fromImage(self._preview_cache[key])
+            if entry.data or entry.extracted_disk_path:
+                pix = load_pixmap_safely(file_path=entry.extracted_disk_path, data=entry.data)
+                if pix and not pix.isNull():
+                    return pix
+            elif entry is primary:
+                self._prefetch_previews()
+        return get_preview_pixmap_for_path(None, option.name, option.description, self.archive_index)
+
+    def _prefetch_previews(self):
+        """Charge en une passe les aperçus différés de toutes les options de l'étape courante."""
+        if not self.steps or self.current_step_idx >= len(self.steps):
+            return
+        if self._preview_worker and self._preview_worker.isRunning():
+            self._preview_pending = True
+            return
+        entries = []
+        for grp in self.steps[self.current_step_idx].groups:
+            for opt in grp.options:
+                primary, _ = pick_preview_entries(self.archive_index, opt, grp)
+                if primary and not primary.data and not primary.extracted_disk_path \
+                        and primary.path.lower() not in self._preview_cache:
+                    entries.append(primary)
+        if not entries:
+            return
+        self._preview_worker = PreviewLoadWorker(self.archive_index, entries)
+        self._preview_worker.loaded.connect(self._on_previews_loaded)
+        self._preview_worker.start()
+
+    def _on_previews_loaded(self, images: dict):
+        self._preview_cache.update(images)
+        if self.active_preview_option:
+            self._on_hover_option(self.active_preview_option)
+        if self._preview_pending:
+            self._preview_pending = False
+            self._prefetch_previews()
+
     def _on_hover_option(self, option: FomodOption):
         """Met à jour instantanément la description et l'image d'aperçu."""
         self.active_preview_option = option
         self.preview_desc_label.setText(option.description or "(Aucune description disponible pour cette option)")
-
-        pixmap = get_preview_pixmap_for_path(
-            option.image_path,
-            option.name,
-            option.description,
-            self.archive_index,
-        )
+        pixmap = self._preview_pixmap(option)
         scaled = pixmap.scaled(
             540, 338,
             Qt.AspectRatioMode.KeepAspectRatio,
@@ -1539,42 +1540,26 @@ class MainWindow(QMainWindow):
         self.preview_image_label.setFixedSize(scaled.width(), scaled.height())
 
     def _on_select_option(self, option: FomodOption, group: FomodGroup):
-        """Bascule la sélection d'une option et met à jour le staging."""
-        is_single = group.type in (GroupType.SelectExactlyOne, GroupType.SelectAtMostOne)
-
-        if is_single:
-            for opt in group.options:
-                self.selected_option_ids.discard(opt.id)
-            self.selected_option_ids.add(option.id)
-        else:
-            if option.id in self.selected_option_ids:
-                self.selected_option_ids.remove(option.id)
-            else:
-                self.selected_option_ids.add(option.id)
-
-        # Mettre à jour les flags
-        self.active_flags.clear()
-        for step in self.steps:
-            for grp in step.groups:
-                for opt in grp.options:
-                    if opt.id in self.selected_option_ids:
-                        for k, v in opt.flags.items():
-                            self.active_flags[k] = v
-
+        """Bascule la sélection d'une option selon les règles du groupe et met à jour le staging."""
+        if not self.session or not self.session.toggle(option, group):
+            self._on_hover_option(option)
+            return
         self._render_current_step()
         self._on_hover_option(option)
         self._trigger_background_staging()
 
     def _next_step(self):
-        if self.current_step_idx < len(self.steps) - 1:
-            self.current_step_idx += 1
+        later = [i for i in self._visible_steps() if i > self.current_step_idx]
+        if later:
+            self.current_step_idx = later[0]
             self._render_current_step()
         else:
             self._on_generate_staging()
 
     def _prev_step(self):
-        if self.current_step_idx > 0:
-            self.current_step_idx -= 1
+        earlier = [i for i in self._visible_steps() if i < self.current_step_idx]
+        if earlier:
+            self.current_step_idx = earlier[-1]
             self._render_current_step()
 
     # =========================================================================
@@ -1583,12 +1568,8 @@ class MainWindow(QMainWindow):
 
     def _trigger_background_staging(self):
         """Calcule le staging en arrière-plan et alimente le résultat."""
-        selected_opts = []
-        for step in self.steps:
-            for grp in step.groups:
-                for opt in grp.options:
-                    if opt.id in self.selected_option_ids:
-                        selected_opts.append(opt)
+        if not self.session:
+            return
 
         if self._staging_worker and self._staging_worker.isRunning():
             try:
@@ -1598,12 +1579,13 @@ class MainWindow(QMainWindow):
             self._staging_worker.wait(1000)
 
         self._staging_worker = StagingWorker(
-            selected_options=selected_opts,
+            selected_options=self.session.selected_options(),
             required_files=self.required_files,
             archive_index=self.archive_index,
             conditional_installs=self.conditional_installs,
             active_flags=dict(self.active_flags),
             installed_basenames=set(self.installed_basenames),
+            forced_items=self.session.forced_items(),
         )
         self._staging_worker.finished.connect(self._on_staging_finished)
         self._staging_worker.start()
@@ -1618,21 +1600,9 @@ class MainWindow(QMainWindow):
     def _on_generate_staging(self):
         """Génère physiquement les fichiers dans le dossier choisi et ouvre la modale de résultat."""
         try:
-            selected_opts = []
-            for step in self.steps:
-                for grp in step.groups:
-                    for opt in grp.options:
-                        if opt.id in self.selected_option_ids:
-                            selected_opts.append(opt)
-
-            res = build_staging(
-                selected_options=selected_opts,
-                required_files=self.required_files,
-                archive_index=self.archive_index,
-                conditional_installs=self.conditional_installs,
-                active_flags=dict(self.active_flags),
-                installed_basenames=set(self.installed_basenames),
-            )
+            if not self.session:
+                return
+            res = self.session.build_staging(self.archive_index)
             self.current_staging_result = res
 
             if os.path.exists(self.staging_dir_path):
@@ -1806,14 +1776,7 @@ class MainWindow(QMainWindow):
 
             if mod_name:
                 self.metadata.name = mod_name
-            self.steps = steps
-            self.required_files = req_files
-            self.conditional_installs = cond_installs
-            self.current_step_idx = 0
-            self.selected_option_ids.clear()
-            self.active_flags.clear()
-
-            self.auto_select_options_for_environment(preserve_manual=False)
+            self._start_session(steps, req_files, cond_installs)
 
             self._render_current_step()
             self._trigger_background_staging()
@@ -1831,12 +1794,7 @@ class MainWindow(QMainWindow):
 
     def _open_image_preview_modal(self):
         if self.active_preview_option:
-            pix = get_preview_pixmap_for_path(
-                self.active_preview_option.image_path,
-                self.active_preview_option.name,
-                self.active_preview_option.description,
-                self.archive_index,
-            )
+            pix = self._preview_pixmap(self.active_preview_option)
             modal = ImagePreviewModal(pix, self.active_preview_option.name, self)
             modal.exec()
 

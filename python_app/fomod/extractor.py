@@ -15,6 +15,8 @@ from .parser import norm
 logger = logging.getLogger(__name__)
 
 IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".bmp", ".dds", ".webp", ".gif")
+# Images légères chargées d'office ; les textures (.dds, .tga) sont lues à la demande
+LIGHT_IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".bmp", ".webp", ".gif")
 FOMOD_CONFIG_SUFFIX = "fomod/moduleconfig.xml"
 # Taille maximale d'un fichier lu en mémoire depuis une archive 7z (XML, images, INI…)
 MAX_7Z_MEMBER_BYTES = 128 * 1024 * 1024
@@ -100,6 +102,7 @@ def reanchor_index(
             size=entry.size,
             data=entry.data,
             extracted_disk_path=entry.extracted_disk_path,
+            member=entry.member,
         )
 
         parts = new_norm_path.split("/")
@@ -116,7 +119,9 @@ def is_essential_file(path_lower: str) -> bool:
     bn = path_lower.split("/")[-1]
     if bn in ("moduleconfig.xml", "info.xml"):
         return True
-    if bn.endswith(IMAGE_EXTENSIONS):
+    if "fomod/" in path_lower:
+        return True
+    if bn.endswith(LIGHT_IMAGE_EXTENSIONS):
         return True
     if bn.endswith((".esp", ".esm", ".esl", ".ini", ".txt")):
         return True
@@ -130,7 +135,14 @@ def decode_xml_text(data: bytes) -> str:
     """Décode du texte XML en gérant UTF-8 avec/sans BOM, UTF-16 et Latin-1."""
     if not data:
         return ""
-    for enc in ("utf-8-sig", "utf-8", "utf-16", "latin-1"):
+    encodings = ["utf-8-sig", "utf-8", "utf-16", "latin-1"]
+    if data[:2] in (b"\xff\xfe", b"\xfe\xff"):
+        encodings.insert(0, "utf-16")
+    elif len(data) > 3 and data[1] == 0 and data[3] == 0:
+        encodings.insert(0, "utf-16-le")  # UTF-16 sans BOM (« <\0?\0x\0… »)
+    elif len(data) > 3 and data[0] == 0 and data[2] == 0:
+        encodings.insert(0, "utf-16-be")
+    for enc in encodings:
         try:
             return data.decode(enc)
         except (UnicodeDecodeError, LookupError):
@@ -235,6 +247,7 @@ def extract_zip(
                     is_dir=False,
                     size=item.file_size,
                     data=data,
+                    member=raw_path,
                 )
 
 
@@ -286,6 +299,7 @@ def extract_tar(
                     is_dir=False,
                     size=m.size,
                     data=data,
+                    member=raw_path,
                 )
 
 
@@ -297,7 +311,7 @@ def extract_tar(
 
     new_files, new_dirs = reanchor_index(files_map, dirs_map)
     module_config_xml, info_xml = select_fomod_xml(new_files)
-    return ArchiveIndex(files=new_files, dirs=new_dirs), module_config_xml, info_xml
+    return ArchiveIndex(files=new_files, dirs=new_dirs, archive_path=archive_path), module_config_xml, info_xml
 
 
 def extract_7z_with_cli(
@@ -368,7 +382,7 @@ def extract_7z_with_cli(
 
         new_files, new_dirs = reanchor_index(files_map, dirs_map)
         module_config_xml, info_xml = select_fomod_xml(new_files)
-        return ArchiveIndex(files=new_files, dirs=new_dirs, temp_dir=tmp_extract), module_config_xml, info_xml
+        return ArchiveIndex(files=new_files, dirs=new_dirs, archive_path=archive_path, temp_dir=tmp_extract), module_config_xml, info_xml
     except Exception as e:
         logger.error(f"Erreur lors de l'extraction CLI : {e}")
         raise
@@ -433,6 +447,7 @@ def extract_7z(
                     is_dir=False,
                     size=item.uncompressed,
                     data=None,
+                    member=raw_path,
                 )
 
                 parts = normalized.split("/")
@@ -459,7 +474,7 @@ def extract_7z(
 
             new_files, new_dirs = reanchor_index(files_map, dirs_map)
             module_config_xml, info_xml = select_fomod_xml(new_files)
-            return ArchiveIndex(files=new_files, dirs=new_dirs), module_config_xml, info_xml
+            return ArchiveIndex(files=new_files, dirs=new_dirs, archive_path=archive_path), module_config_xml, info_xml
 
     except Exception as py7zr_err:
         logger.warning(f"Échec de l'extraction py7zr ({py7zr_err}), tentative via fallback...")
@@ -513,6 +528,7 @@ def extract_rar(
                     is_dir=False,
                     size=item.file_size,
                     data=data,
+                    member=raw_path,
                 )
 
 
@@ -524,7 +540,7 @@ def extract_rar(
 
             new_files, new_dirs = reanchor_index(files_map, dirs_map)
             module_config_xml, info_xml = select_fomod_xml(new_files)
-            return ArchiveIndex(files=new_files, dirs=new_dirs), module_config_xml, info_xml
+            return ArchiveIndex(files=new_files, dirs=new_dirs, archive_path=archive_path), module_config_xml, info_xml
     except Exception as rarfile_err:
         logger.info(f"rarfile non utilisable ({rarfile_err}), tentative par CLI système...")
 
@@ -578,3 +594,55 @@ def extract_archive(
                 return extract_7z(str(p), progress_cb)
             except Exception:
                 return extract_tar(str(p), progress_cb)
+
+
+def read_entries_bytes(index: ArchiveIndex, entries: List[VirtualFileEntry]) -> Dict[str, bytes]:
+    """Lit à la demande le contenu de fichiers non chargés à l'indexation (textures d'aperçu…).
+    Une seule passe par archive : dans un 7z « solide », extraire plusieurs membres d'un coup
+    coûte autant qu'en extraire un seul. Renvoie {chemin normalisé en minuscules: octets}."""
+    out: Dict[str, bytes] = {}
+    pending: List[VirtualFileEntry] = []
+    for e in entries:
+        data = _read_entry_bytes(e)
+        if data:
+            out[e.path.lower()] = data
+        elif e.member:
+            pending.append(e)
+    if not pending or not index.archive_path or os.path.isdir(index.archive_path):
+        return out
+
+    by_member = {e.member: e for e in pending}
+    path = index.archive_path
+    ext = Path(path).suffix.lower()
+    try:
+        if ext == ".zip" or zipfile.is_zipfile(path):
+            with zipfile.ZipFile(path) as zf:
+                for member, e in by_member.items():
+                    out[e.path.lower()] = zf.read(member)
+        elif ext == ".7z":
+            for member, data in _read_7z_members(path, list(by_member)).items():
+                if member in by_member:
+                    out[by_member[member].path.lower()] = data
+        elif ext in (".tar", ".gz", ".bz2", ".tgz"):
+            with tarfile.open(path, "r:*") as tf:
+                for member, e in by_member.items():
+                    fh = tf.extractfile(member)
+                    if fh:
+                        out[e.path.lower()] = fh.read()
+        else:  # RAR et autres : rarfile, sinon bsdtar
+            try:
+                import rarfile
+
+                with rarfile.RarFile(path) as rf:
+                    for member, e in by_member.items():
+                        out[e.path.lower()] = rf.read(member)
+            except Exception:
+                tool = shutil.which("bsdtar") or shutil.which("tar")
+                for member, e in by_member.items():
+                    if tool:
+                        r = subprocess.run([tool, "-xOf", path, member], capture_output=True, check=False)
+                        if r.returncode == 0 and r.stdout:
+                            out[e.path.lower()] = r.stdout
+    except Exception as err:
+        logger.warning(f"Lecture différée impossible dans {os.path.basename(path)} : {err}")
+    return out

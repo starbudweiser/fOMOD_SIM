@@ -55,9 +55,11 @@ class StagingWorker(QThread):
         conditional_installs: Optional[List[ConditionalInstallPattern]] = None,
         active_flags: Optional[Dict[str, str]] = None,
         installed_basenames: Optional[Set[str]] = None,
+        forced_items: Optional[list] = None,
         parent=None,
     ):
         super().__init__(parent)
+        self.forced_items = forced_items or []
         self.selected_options = selected_options
         self.required_files = required_files
         self.archive_index = archive_index
@@ -76,9 +78,48 @@ class StagingWorker(QThread):
                 conditional_installs=self.conditional_installs,
                 active_flags=self.active_flags,
                 installed_basenames=self.installed_basenames,
+                forced_items=self.forced_items,
             )
             logger.debug(f"Staging calculé : {len(res.items)} fichiers, {res.total_size} octets")
             self.finished.emit(res)
         except Exception as e:
             logger.exception("Erreur lors de la construction du staging")
             self.error.emit(str(e))
+
+
+class PreviewLoadWorker(QThread):
+    """Lit et décode en arrière-plan les images d'aperçu non chargées (textures DDS dans un 7z…),
+    en une seule passe d'archive, puis les réduit en vignettes."""
+
+    loaded = pyqtSignal(object)  # {chemin en minuscules: QImage}
+
+    def __init__(self, archive_index, entries, parent=None):
+        super().__init__(parent)
+        self.archive_index = archive_index
+        self.entries = entries
+
+    def run(self):
+        import io
+        from PyQt6.QtGui import QImage
+        from ..fomod.extractor import read_entries_bytes
+
+        out = {}
+        try:
+            for key, data in read_entries_bytes(self.archive_index, self.entries).items():
+                img = QImage()
+                if not img.loadFromData(data):
+                    try:
+                        from PIL import Image, ImageQt
+
+                        im = Image.open(io.BytesIO(data))
+                        im.thumbnail((1280, 1280))
+                        img = ImageQt.ImageQt(im.convert("RGBA")).copy()
+                    except Exception as e:
+                        logger.debug("Aperçu non décodable %s : %s", key, e)
+                        continue
+                if img.width() > 1280 or img.height() > 1280:
+                    img = img.scaled(1280, 1280, aspectRatioMode=1, transformMode=1)
+                out[key] = img
+        except Exception:
+            logger.exception("Erreur de chargement des aperçus")
+        self.loaded.emit(out)

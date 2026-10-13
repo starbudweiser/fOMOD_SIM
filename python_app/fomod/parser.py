@@ -126,19 +126,13 @@ def find_file_in_index(index: ArchiveIndex, src: str) -> Optional[VirtualFileEnt
             if "__macosx" not in f.path.lower():
                 return f
 
-    # 3. Correspondance par suffixe dans les deux sens
+    # 3. Correspondance par suffixe, sur des segments entiers (« mod.esp » ne trouve pas « mymod.esp »)
     suffix_cands: List[VirtualFileEntry] = []
     suffix_slash_key = "/" + key
     for rel_key, entry in index.files.items():
         if "__macosx" in rel_key:
             continue
-        if (
-            rel_key == key
-            or rel_key.endswith(key)
-            or rel_key.endswith(suffix_slash_key)
-            or key.endswith("/" + rel_key)
-            or key.endswith(rel_key)
-        ):
+        if rel_key.endswith(suffix_slash_key) or key.endswith("/" + rel_key):
             suffix_cands.append(entry)
 
     if suffix_cands:
@@ -176,98 +170,161 @@ def find_file_in_index(index: ArchiveIndex, src: str) -> Optional[VirtualFileEnt
     return None
 
 
+IMAGE_EXTS = (".png", ".jpg", ".jpeg", ".bmp", ".dds", ".tga", ".webp", ".gif")
+
+
+def find_image_in_index(index: ArchiveIndex, src: str) -> Optional[VirtualFileEntry]:
+    """Comme find_file_in_index, mais tolère une extension d'image différente de celle déclarée
+    (installeur qui annonce « .png » alors que l'archive contient « .jpg »)."""
+    entry = find_file_in_index(index, src)
+    if entry is not None or not src:
+        return entry
+    key = norm(src).lower()
+    stem = key.rsplit(".", 1)[0] if "." in key.split("/")[-1] else key
+    for ext in IMAGE_EXTS:
+        alt = find_file_in_index(index, stem + ext)
+        if alt is not None:
+            return alt
+    return None
+
+
 def find_folder_in_index(index: ArchiveIndex, src: str) -> Optional[str]:
+    """Retrouve un dossier de l'archive (casse d'origine). Une source vide désigne la racine du mod."""
     raw_key = norm(src)
     if not raw_key:
-        return None
+        return ""
     key = raw_key.lower()
 
     # 1. Correspondance exacte
-    if key in index.dirs:
-        orig = index.dirs[key]
-        if "__macosx" not in orig.lower():
-            return orig
+    if key in index.dirs and "__macosx" not in key:
+        return index.dirs[key]
 
-    # 2. Correspondance par suffixe
-    cands: List[str] = []
+    # 2. Dossier implicite (archives sans entrées de dossier) : déduit des chemins de fichiers
+    prefix = key + "/"
+    for rel_key, entry in index.files.items():
+        if rel_key.startswith(prefix) and "__macosx" not in rel_key:
+            return entry.path[: len(raw_key)]
+
+    # 3. Correspondance par suffixe sur des segments entiers
     slash_key = "/" + key
+    cands: List[str] = []
     for rel_key, orig in index.dirs.items():
         if "__macosx" in rel_key:
             continue
-        if rel_key == key or rel_key.endswith(slash_key) or rel_key.endswith(key):
+        if rel_key.endswith(slash_key) or key.endswith("/" + rel_key):
             cands.append(orig)
     if cands:
         cands.sort(key=len)
         return cands[0]
 
-    # 3. Correspondance sans préfixes numériques
+    # 4. Correspondance sans préfixes numériques (« 01 Textures » ↔ « Textures »)
     key_bn = strip_num_prefix(key)
     prefix_cands: List[str] = []
     for rel_key, orig in index.dirs.items():
         if "__macosx" in rel_key:
             continue
-        stripped_rel = strip_num_prefix(rel_key)
-        if stripped_rel == key_bn or stripped_rel.endswith("/" + key_bn):
+        same_parent = rel_key.rpartition("/")[0] == key.rpartition("/")[0]
+        if same_parent and strip_num_prefix(rel_key) == key_bn:
             prefix_cands.append(orig)
     if prefix_cands:
         prefix_cands.sort(key=len)
         return prefix_cands[0]
 
-    # 4. Dossier contenu dans les chemins de fichiers indexés
-    for rel_key in index.files.keys():
-        if "__macosx" in rel_key:
-            continue
-        if rel_key.startswith(key + "/") or ("/" + key + "/") in rel_key:
-            idx = rel_key.find(key)
-            return rel_key[: idx + len(key)]
-
     return None
 
 
+def _local(tag: str) -> str:
+    return tag.split("}", 1)[-1].lower()
+
+
+def _attr(el: ET.Element, *names: str, default: Optional[str] = None) -> Optional[str]:
+    """Lit un attribut sans tenir compte de la casse de son nom."""
+    lowered = {k.lower(): v for k, v in el.attrib.items()}
+    for n in names:
+        v = lowered.get(n.lower())
+        if v is not None:
+            return v
+    return default
+
+
+def _children(el: ET.Element, *names: str) -> List[ET.Element]:
+    wanted = {n.lower() for n in names}
+    return [c for c in el if _local(c.tag) in wanted]
+
+
+def _child(el: ET.Element, *names: str) -> Optional[ET.Element]:
+    found = _children(el, *names)
+    return found[0] if found else None
+
+
 def parse_dependencies_node(node: ET.Element) -> FomodDependencies:
-    """Analyse récursive d'un bloc <dependencies>."""
-    operator = node.attrib.get("operator", "And")
+    """Analyse récursive d'un bloc de dépendances (<dependencies>, <visible>, <moduleDependencies>…).
+    Le nœud lui-même porte l'opérateur ; ses enfants sont les conditions."""
+    operator = _attr(node, "operator", default="And") or "And"
     file_deps: List[FileDependency] = []
     flag_deps: List[FlagDependency] = []
     nested_deps: List[FomodDependencies] = []
+    assumed = 0
 
     for child in node:
-        tag = child.tag.split("}")[-1] if "}" in child.tag else child.tag
-        tag_lower = tag.lower()
-
-        if tag_lower == "filedependency":
-            f = child.attrib.get("file") or child.attrib.get("File") or ""
-            st = child.attrib.get("state") or child.attrib.get("State") or "Active"
+        tag = _local(child.tag)
+        if tag == "filedependency":
+            f = _attr(child, "file", default="") or ""
+            st = _attr(child, "state", default="Active") or "Active"
             if f:
                 file_deps.append(FileDependency(file=f, state=st))
-        elif tag_lower == "flagdependency":
-            fl = child.attrib.get("flag") or child.attrib.get("Flag") or ""
-            val = child.attrib.get("value") or child.attrib.get("Value") or ""
+        elif tag == "flagdependency":
+            fl = _attr(child, "flag", default="") or ""
+            val = _attr(child, "value", default="") or ""
             if fl:
                 flag_deps.append(FlagDependency(flag=fl, value=val))
-        elif tag_lower == "dependencies":
+        elif tag == "dependencies":
             nested_deps.append(parse_dependencies_node(child))
+        elif tag.endswith("dependency"):
+            # gameDependency, fommDependency, foseDependency… : non simulables, supposées satisfaites
+            assumed += 1
 
     return FomodDependencies(
         operator=operator,
         file_dependencies=file_deps,
         flag_dependencies=flag_deps,
         nested_dependencies=nested_deps,
+        assumed_true=assumed,
     )
 
 
-def check_flag_value(curr_val: Optional[str], expected_val: str) -> bool:
-    """Évalue la concordance d'un flag FOMOD.
-    Gère le fait qu'un flag non défini est considéré 'inactive'/'false'."""
-    curr = (curr_val or "").strip().lower()
-    exp = (expected_val or "").strip().lower()
+def parse_condition_container(node: Optional[ET.Element]) -> Optional[FomodDependencies]:
+    """<visible> ou <pattern> peuvent contenir les conditions directement ou via un <dependencies>."""
+    if node is None:
+        return None
+    if _local(node.tag) == "dependencies":
+        return parse_dependencies_node(node)
+    inner = _children(node, "dependencies")
+    has_direct = any(_local(c.tag).endswith("dependency") for c in node)
+    if len(inner) == 1 and not has_direct:
+        return parse_dependencies_node(inner[0])
+    return parse_dependencies_node(node)
 
-    if exp in ("inactive", "false", "missing", "0", "off", "none"):
-        return curr in ("", "inactive", "false", "missing", "0", "off", "none")
-    elif exp in ("active", "true", "1", "on"):
-        return curr in ("active", "true", "1", "on")
-    else:
-        return curr == exp
+
+FLAG_FALSE = ("", "inactive", "false", "missing", "0", "off", "none", "no", "disabled")
+FLAG_TRUE = ("active", "true", "1", "on", "yes", "enabled")
+
+
+def check_flag_value(curr_val: Optional[str], expected_val: str) -> bool:
+    """Évalue la concordance d'un flag FOMOD (comparaison exacte d'abord, puis équivalences
+    usuelles On/True/Active…). Un flag non défini vaut la chaîne vide."""
+    curr = (curr_val or "").strip()
+    exp = (expected_val or "").strip()
+    if curr == exp:
+        return True
+    cl, el = curr.lower(), exp.lower()
+    if cl == el:
+        return True
+    if el in FLAG_FALSE:
+        return cl in FLAG_FALSE
+    if el in FLAG_TRUE:
+        return cl in FLAG_TRUE
+    return False
 
 
 def evaluate_dependencies(
@@ -275,27 +332,29 @@ def evaluate_dependencies(
     installed_basenames: Set[str],
     active_flags: Dict[str, str],
 ) -> bool:
-    """Évalue récursivement si les dépendances FOMOD sont satisfaites."""
+    """Évalue récursivement si les dépendances FOMOD sont satisfaites.
+    Les plugins présents dans le dossier Data sont considérés comme actifs."""
     if not deps:
         return True
 
-    results: List[bool] = []
+    results: List[bool] = [True] * deps.assumed_true
 
     for fd in deps.file_dependencies:
-        raw_f = fd.file.replace("\\", "/").strip()
-        base = raw_f.split("/")[-1].lower()
+        base = fd.file.replace("\\", "/").strip().split("/")[-1].lower()
         present = base in installed_basenames
         st = (fd.state or "Active").strip().lower()
         if st in ("active", "present", "installed", "true"):
             results.append(present)
-        elif st in ("inactive", "missing", "absent", "false"):
+        elif st in ("missing", "absent", "false"):
             results.append(not present)
+        elif st == "inactive":
+            # Présent mais désactivé : impossible à distinguer, les plugins présents sont supposés actifs
+            results.append(False)
         else:
             results.append(present)
 
     for flag_dep in deps.flag_dependencies:
-        curr_val = active_flags.get(flag_dep.flag)
-        results.append(check_flag_value(curr_val, flag_dep.value))
+        results.append(check_flag_value(active_flags.get(flag_dep.flag), flag_dep.value))
 
     for nested in deps.nested_dependencies:
         results.append(evaluate_dependencies(nested, installed_basenames, active_flags))
@@ -306,10 +365,9 @@ def evaluate_dependencies(
     op = (deps.operator or "And").strip().lower()
     if op == "or":
         return any(results)
-    elif op == "not":
+    if op == "not":
         return not any(results)
-    else:  # "and"
-        return all(results)
+    return all(results)
 
 
 def compute_option_type(
@@ -370,187 +428,200 @@ def is_option_recommended(
     return opt.is_default
 
 
+RE_XML_DECL = re.compile(r"^\s*<\?xml[^>]*\?>", re.I)
+
+
+def load_xml_root(xml_text: str) -> ET.Element:
+    """Parse un XML FOMOD tolérant : BOM, déclaration d'encodage (UTF-16…) déjà décodée,
+    caractères de contrôle parasites ; supprime les espaces de noms des balises."""
+    cleaned = xml_text.lstrip("﻿").replace("\x00", "")
+    # La déclaration <?xml encoding="UTF-16"?> est fausse une fois le texte décodé : on la retire
+    cleaned = RE_XML_DECL.sub("", cleaned, count=1).strip()
+    cleaned = re.sub(r"[\x01-\x08\x0b\x0c\x0e-\x1f]", "", cleaned)
+    # Esperluettes nues (« Tops & Bottoms ») : fréquentes dans les FOMOD écrits à la main
+    cleaned = re.sub(r"&(?!(?:[a-zA-Z]+|#\d+|#x[0-9a-fA-F]+);)", "&amp;", cleaned)
+    root = ET.fromstring(cleaned)
+    for el in root.iter():
+        if isinstance(el.tag, str) and "}" in el.tag:
+            el.tag = el.tag.split("}", 1)[1]
+    return root
+
+
+def _ordered(elements: List[ET.Element], container: Optional[ET.Element]) -> List[ET.Element]:
+    """Applique l'attribut order (Explicit | Ascending | Descending) du conteneur.
+    Sans attribut, l'ordre du document est conservé (comportement de Mod Organizer 2)."""
+    order = (_attr(container, "order", default="") or "").strip().lower() if container is not None else ""
+    if order == "ascending":
+        return sorted(elements, key=lambda e: (_attr(e, "name", default="") or "").casefold())
+    if order == "descending":
+        return sorted(elements, key=lambda e: (_attr(e, "name", default="") or "").casefold(), reverse=True)
+    return elements
+
+
+def _truthy(v: Optional[str]) -> bool:
+    return (v or "").strip().lower() in ("true", "1", "yes")
+
+
+def _parse_file_list(container: Optional[ET.Element]) -> List[FomodFileItem | FomodFolderItem]:
+    """Lit les <file>/<folder> d'un conteneur <files> ou <requiredInstallFiles>.
+    Destination absente = même chemin que la source (schéma FOMOD) ; destination vide = racine."""
+    items: List[FomodFileItem | FomodFolderItem] = []
+    if container is None:
+        return items
+    for el in container.iter():
+        tag = _local(el.tag)
+        if tag not in ("file", "folder"):
+            continue
+        raw_src = _attr(el, "source", default=None)
+        if raw_src is None:
+            continue
+        src = norm(raw_src)
+        raw_dst = _attr(el, "destination", default=None)
+        dst = src if raw_dst is None else norm(raw_dst)
+        try:
+            prio = int((_attr(el, "priority", default="0") or "0").strip())
+        except ValueError:
+            prio = 0
+        kwargs = dict(
+            source=src,
+            destination=dst,
+            priority=prio,
+            always_install=_truthy(_attr(el, "alwaysInstall")),
+            install_if_usable=_truthy(_attr(el, "installIfUsable")),
+        )
+        if tag == "file":
+            if src:
+                items.append(FomodFileItem(**kwargs))
+        else:
+            # Un dossier source vide désigne la racine du mod
+            items.append(FomodFolderItem(**kwargs))
+    return items
+
+
+def _parse_type_descriptor(pl_el: ET.Element) -> Optional[TypeDescriptor]:
+    td_el = _child(pl_el, "typeDescriptor")
+    if td_el is None:
+        return None
+    dt_el = _child(td_el, "dependencyType")
+    if dt_el is not None:
+        def_el = _child(dt_el, "defaultType")
+        def_name = (_attr(def_el, "name", default="Optional") if def_el is not None else "Optional") or "Optional"
+        patterns: List[TypeDescriptorPattern] = []
+        pats = _child(dt_el, "patterns")
+        for pat_el in _children(pats, "pattern") if pats is not None else []:
+            deps = parse_condition_container(_child(pat_el, "dependencies")) or FomodDependencies()
+            t_el = _child(pat_el, "type")
+            t_name = (_attr(t_el, "name", default="Optional") if t_el is not None else "Optional") or "Optional"
+            patterns.append(TypeDescriptorPattern(dependencies=deps, type_name=t_name))
+        return TypeDescriptor(default_type=def_name, patterns=patterns)
+    t_el = _child(td_el, "type")
+    if t_el is not None:
+        return TypeDescriptor(default_type=_attr(t_el, "name", default="Optional") or "Optional", patterns=[])
+    return None
+
+
+def _element_text(el: Optional[ET.Element]) -> str:
+    return (el.text or "").strip() if el is not None else ""
+
+
 def parse_module_config_xml(
     xml_text: str,
 ) -> Tuple[str, List[FomodStep], List[FomodFileItem | FomodFolderItem], List[ConditionalInstallPattern]]:
-    """Analyse ModuleConfig.xml et renvoie (nom_module, étapes, fichiers_requis, conditional_installs)."""
+    """Analyse ModuleConfig.xml et renvoie (nom_module, étapes, fichiers_requis, conditional_installs).
+    Suit le schéma ModConfig 5.0 (installSteps > installStep > optionalFileGroups > group > plugins
+    > plugin) et tolère les variantes rencontrées dans les mods réels."""
     if not xml_text or not xml_text.strip():
         logger.warning("Texte XML vide ou absent pour ModuleConfig.xml")
         return "Mod sans configuration FOMOD", [], [], []
 
     try:
-        cleaned = xml_text.strip().lstrip("\ufeff")
-        root = ET.fromstring(cleaned)
-        # SUPPRESSION UNIVERSELLE DES NAMESPACES XML
-        for el in root.iter():
-            if "}" in el.tag:
-                el.tag = el.tag.split("}", 1)[1]
+        root = load_xml_root(xml_text)
     except Exception as e:
         logger.exception("Erreur de parsing XML dans ModuleConfig.xml")
         raise ValueError(f"Erreur de syntaxe XML : {e}")
 
-    # Recherche du nom de module
-    module_name = ""
-    for child in root.iter():
-        tag = child.tag.lower()
-        if tag == "modulename" and child.text and child.text.strip():
-            module_name = child.text.strip()
-            break
+    module_name = _element_text(_child(root, "moduleName"))
     if not module_name:
-        module_name = root.attrib.get("name", "Mod Skyrim")
+        for child in root.iter():
+            if _local(child.tag) == "modulename" and _element_text(child):
+                module_name = _element_text(child)
+                break
+    if not module_name:
+        module_name = _attr(root, "name", default="Mod Skyrim") or "Mod Skyrim"
 
-    # Fichiers requis (requiredInstallFiles)
+    # Fichiers requis
     required_files: List[FomodFileItem | FomodFolderItem] = []
-    for req_node in root.findall(".//requiredInstallFiles"):
-        for fn in req_node.findall(".//file"):
-            s = norm(fn.attrib.get("source") or fn.attrib.get("Source"))
-            d = norm(fn.attrib.get("destination") or fn.attrib.get("Destination"))
-            p = int(fn.attrib.get("priority", "0") or fn.attrib.get("Priority", "0") or "0")
-            if s:
-                required_files.append(FomodFileItem(source=s, destination=d, priority=p))
-        for fld in req_node.findall(".//folder"):
-            s = norm(fld.attrib.get("source") or fld.attrib.get("Source"))
-            d = norm(fld.attrib.get("destination") or fld.attrib.get("Destination"))
-            p = int(fld.attrib.get("priority", "0") or fld.attrib.get("Priority", "0") or "0")
-            if s:
-                required_files.append(FomodFolderItem(source=s, destination=d, priority=p))
+    for req_node in [c for c in root.iter() if _local(c.tag) == "requiredinstallfiles"]:
+        required_files.extend(_parse_file_list(req_node))
 
-    # Étapes (installStep / step)
-    all_steps = root.findall(".//installStep") or root.findall(".//step")
+    # Étapes, dans l'ordre demandé par <installSteps order="…">
+    steps_container = _child(root, "installSteps")
+    if steps_container is not None:
+        step_elements = _ordered(_children(steps_container, "installStep"), steps_container)
+    else:
+        step_elements = [c for c in root.iter() if _local(c.tag) in ("installstep", "step")]
+
     steps: List[FomodStep] = []
-
-    for step_idx, step_el in enumerate(all_steps):
-        step_name = step_el.attrib.get("name", "").strip()
-        if not step_name:
-            for child in step_el:
-                if child.tag.lower() == "name" and child.text:
-                    step_name = child.text.strip()
-                    break
+    for step_idx, step_el in enumerate(step_elements):
+        step_name = (_attr(step_el, "name", default="") or "").strip() or _element_text(_child(step_el, "name"))
         if not step_name:
             step_name = f"Étape {step_idx + 1}"
 
-        # Groupes dans l'étape (dédupliqués)
-        raw_groups = step_el.findall(".//group") or step_el.findall(".//optionalFileGroup")
-        seen_grps = set()
-        group_elements = []
-        for g in raw_groups:
-            if g not in seen_grps:
-                seen_grps.add(g)
-                group_elements.append(g)
+        visibility = parse_condition_container(_child(step_el, "visible"))
+
+        groups_container = _child(step_el, "optionalFileGroups")
+        if groups_container is not None:
+            group_elements = _ordered(_children(groups_container, "group"), groups_container)
+        else:
+            group_elements = [c for c in step_el.iter() if _local(c.tag) in ("group", "optionalfilegroup")]
 
         groups: List[FomodGroup] = []
         for grp_idx, grp_el in enumerate(group_elements):
-            group_name = grp_el.attrib.get("name", "").strip()
-            if not group_name:
-                for child in grp_el:
-                    if child.tag.lower() == "name" and child.text:
-                        group_name = child.text.strip()
-                        break
+            group_name = (_attr(grp_el, "name", default="") or "").strip() or _element_text(_child(grp_el, "name"))
             if not group_name:
                 group_name = f"Groupe {grp_idx + 1}"
 
-            raw_type = grp_el.attrib.get("type", "SelectExactlyOne")
-            grp_type = GroupType.SelectExactlyOne
-            for gt in GroupType:
-                if gt.value.lower() == raw_type.lower():
-                    grp_type = gt
-                    break
+            raw_type = (_attr(grp_el, "type", default="SelectAny") or "SelectAny").strip()
+            grp_type = next((gt for gt in GroupType if gt.value.lower() == raw_type.lower()), GroupType.SelectAny)
 
-            # Options / Plugins (dédupliqués)
-            raw_plugins = grp_el.findall(".//plugin") or grp_el.findall(".//option")
-            seen_pls = set()
-            plugin_elements = []
-            for p in raw_plugins:
-                if p not in seen_pls:
-                    seen_pls.add(p)
-                    plugin_elements.append(p)
+            plugins_container = _child(grp_el, "plugins")
+            if plugins_container is not None:
+                plugin_elements = _ordered(_children(plugins_container, "plugin"), plugins_container)
+            else:
+                plugin_elements = [c for c in grp_el.iter() if _local(c.tag) in ("plugin", "option")]
 
             options: List[FomodOption] = []
             for pl_idx, pl_el in enumerate(plugin_elements):
-                opt_name = pl_el.attrib.get("name", "").strip()
+                opt_name = (_attr(pl_el, "name", default="") or "").strip()
                 if not opt_name:
-                    for child in pl_el:
-                        if child.tag.lower() in ("name", "text") and child.text:
-                            opt_name = child.text.strip()
-                            break
+                    opt_name = _element_text(_child(pl_el, "name", "text"))
 
-                desc = ""
-                for child in pl_el:
-                    if child.tag.lower() == "description" and child.text:
-                        desc = child.text.strip()
-                        break
+                desc = _element_text(_child(pl_el, "description"))
+                image_path = extract_element_image(_child(pl_el, "image")) or extract_element_image(pl_el)
 
-                # Extraction universelle de l'image de preview
-                image_path = extract_element_image(pl_el)
-
-                # Fichiers de l'option
-                files: List[FomodFileItem] = []
-                for fn in pl_el.findall(".//file"):
-                    s = norm(fn.attrib.get("source") or fn.attrib.get("Source"))
-                    d = norm(fn.attrib.get("destination") or fn.attrib.get("Destination"))
-                    prio = int(fn.attrib.get("priority", "0") or fn.attrib.get("Priority", "0") or "0")
-                    if s:
-                        files.append(FomodFileItem(source=s, destination=d, priority=prio))
-
-                # Dossiers de l'option
-                folders: List[FomodFolderItem] = []
-                for fld in pl_el.findall(".//folder"):
-                    s = norm(fld.attrib.get("source") or fld.attrib.get("Source"))
-                    d = norm(fld.attrib.get("destination") or fld.attrib.get("Destination"))
-                    prio = int(fld.attrib.get("priority", "0") or fld.attrib.get("Priority", "0") or "0")
-                    if s:
-                        folders.append(FomodFolderItem(source=s, destination=d, priority=prio))
+                items = _parse_file_list(_child(pl_el, "files"))
+                files = [i for i in items if isinstance(i, FomodFileItem)]
+                folders = [i for i in items if isinstance(i, FomodFolderItem)]
 
                 if not opt_name:
-                    if files:
-                        opt_name = files[0].source.split("/")[-1]
-                    elif folders:
-                        opt_name = folders[0].source.split("/")[-1]
-                    else:
-                        opt_name = f"Option {pl_idx + 1}"
+                    first = (files or folders or [None])[0]
+                    opt_name = first.source.split("/")[-1] if first else f"Option {pl_idx + 1}"
 
-                # Flags
+                # Flags : <flag name="X">valeur</flag> (la valeur est le texte de la balise)
                 flags: Dict[str, str] = {}
-                for fl_el in pl_el.findall(".//conditionFlags/flag"):
-                    fn = fl_el.attrib.get("name")
-                    fv = fl_el.attrib.get("value", "true")
-                    if fn:
-                        flags[fn] = fv
+                cf = _child(pl_el, "conditionFlags")
+                for fl_el in _children(cf, "flag") if cf is not None else []:
+                    fname = _attr(fl_el, "name")
+                    if fname:
+                        fval = fl_el.text.strip() if fl_el.text is not None else (_attr(fl_el, "value", default="") or "")
+                        flags[fname] = fval
 
-                # Dépendances et TypeDescriptor complet
-                type_desc_obj: Optional[TypeDescriptor] = None
-                deps: Optional[FomodDependencies] = None
+                type_desc_obj = _parse_type_descriptor(pl_el)
+                # Dépendances directes sur le plugin (hors schéma, rencontrées dans de vieux FOMOD)
+                deps = parse_condition_container(_child(pl_el, "dependencies"))
 
-                td_el = pl_el.find(".//typeDescriptor")
-                if td_el is not None:
-                    dt_el = td_el.find(".//dependencyType")
-                    if dt_el is not None:
-                        def_type_el = dt_el.find(".//defaultType")
-                        def_name = def_type_el.attrib.get("name", "Optional") if def_type_el is not None else "Optional"
-                        patterns: List[TypeDescriptorPattern] = []
-                        for pat_el in dt_el.findall(".//patterns/pattern"):
-                            d_el = pat_el.find(".//dependencies")
-                            pat_deps = parse_dependencies_node(d_el) if d_el is not None else FomodDependencies()
-                            t_el = pat_el.find(".//type")
-                            t_name = t_el.attrib.get("name", "Optional") if t_el is not None else "Optional"
-                            patterns.append(TypeDescriptorPattern(dependencies=pat_deps, type_name=t_name))
-                        type_desc_obj = TypeDescriptor(default_type=def_name, patterns=patterns)
-                    else:
-                        t_el = td_el.find(".//type")
-                        if t_el is not None:
-                            t_name = t_el.attrib.get("name", "Optional")
-                            type_desc_obj = TypeDescriptor(default_type=t_name, patterns=[])
-
-                direct_dep_el = pl_el.find(".//dependencies")
-                if direct_dep_el is not None:
-                    deps = parse_dependencies_node(direct_dep_el)
-
-                # Calcul is_default
-                is_def = False
-                if type_desc_obj and type_desc_obj.default_type.lower() in ("recommended", "required"):
-                    is_def = True
-                elif pl_idx == 0 and grp_type in (GroupType.SelectExactlyOne, GroupType.SelectAtLeastOne):
-                    is_def = True
+                td_default = type_desc_obj.default_type.lower() if type_desc_obj else ""
+                is_def = td_default in ("recommended", "required")
 
                 options.append(
                     FomodOption(
@@ -567,74 +638,32 @@ def parse_module_config_xml(
                     )
                 )
 
-            groups.append(
-                FomodGroup(
-                    id=f"step_{step_idx}_grp_{grp_idx}",
-                    name=group_name,
-                    type=grp_type,
-                    options=options,
+            groups.append(FomodGroup(id=f"step_{step_idx}_grp_{grp_idx}", name=group_name, type=grp_type, options=options))
+
+        steps.append(FomodStep(id=f"step_{step_idx}", name=step_name, groups=groups, visibility=visibility))
+
+    # conditionalFileInstalls
+    conditional_installs: List[ConditionalInstallPattern] = []
+    for c_node in [c for c in root.iter() if _local(c.tag) == "conditionalfileinstalls"]:
+        pats = _child(c_node, "patterns")
+        for pat_el in _children(pats, "pattern") if pats is not None else []:
+            pat_deps = parse_condition_container(_child(pat_el, "dependencies")) or FomodDependencies()
+            items = _parse_file_list(_child(pat_el, "files"))
+            conditional_installs.append(
+                ConditionalInstallPattern(
+                    dependencies=pat_deps,
+                    files=[i for i in items if isinstance(i, FomodFileItem)],
+                    folders=[i for i in items if isinstance(i, FomodFolderItem)],
                 )
             )
 
-        steps.append(
-            FomodStep(
-                id=f"step_{step_idx}",
-                name=step_name,
-                groups=groups,
-                visible=True,
-            )
-        )
-
-    # Déduplication des étapes identiques
-    unique_steps: List[FomodStep] = []
-    seen_sigs: Set[str] = set()
-    for s in steps:
-        sig = "|".join(
-            f"{g.name}:" + ",".join(
-                f"{o.name}:" + "+".join(sorted(f.source for f in o.files) + sorted(fo.source for fo in o.folders))
-                for o in g.options
-            )
-            for g in s.groups
-        )
-        if sig not in seen_sigs:
-            seen_sigs.add(sig)
-            unique_steps.append(s)
-
-    # Analyse complète de conditionalFileInstalls
-    conditional_installs: List[ConditionalInstallPattern] = []
-    for c_node in root.findall(".//conditionalFileInstalls"):
-        for pat_el in c_node.findall(".//patterns/pattern"):
-            dep_el = pat_el.find(".//dependencies")
-            pat_deps = parse_dependencies_node(dep_el) if dep_el is not None else FomodDependencies()
-            c_files: List[FomodFileItem] = []
-            c_folders: List[FomodFolderItem] = []
-            files_container = pat_el.find(".//files")
-            if files_container is not None:
-                for fn in files_container.findall(".//file"):
-                    s = norm(fn.attrib.get("source") or fn.attrib.get("Source"))
-                    d = norm(fn.attrib.get("destination") or fn.attrib.get("Destination"))
-                    p = int(fn.attrib.get("priority", "0") or fn.attrib.get("Priority", "0") or "0")
-                    if s:
-                        c_files.append(FomodFileItem(source=s, destination=d, priority=p))
-                for fld in files_container.findall(".//folder"):
-                    s = norm(fld.attrib.get("source") or fld.attrib.get("Source"))
-                    d = norm(fld.attrib.get("destination") or fld.attrib.get("Destination"))
-                    p = int(fld.attrib.get("priority", "0") or fld.attrib.get("Priority", "0") or "0")
-                    if s:
-                        c_folders.append(FomodFolderItem(source=s, destination=d, priority=p))
-            conditional_installs.append(ConditionalInstallPattern(dependencies=pat_deps, files=c_files, folders=c_folders))
-
-    return module_name, unique_steps, required_files, conditional_installs
+    return module_name, steps, required_files, conditional_installs
 
 
 def parse_info_xml(xml_text: str) -> FomodMetadata:
     """Analyse info.xml pour extraire les métadonnées (nom, auteur, version, description, website)."""
     try:
-        cleaned = xml_text.strip().lstrip("\ufeff")
-        root = ET.fromstring(cleaned)
-        for el in root.iter():
-            if "}" in el.tag:
-                el.tag = el.tag.split("}", 1)[1]
+        root = load_xml_root(xml_text)
 
         def get_text(tags: List[str]) -> str:
             for tag in tags:

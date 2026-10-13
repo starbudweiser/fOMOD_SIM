@@ -15,7 +15,7 @@ from PyQt6.QtGui import (
     QLinearGradient,
 )
 from ..fomod.types import ArchiveIndex
-from ..fomod.parser import find_file_in_index
+from ..fomod.parser import find_image_in_index
 
 logger = logging.getLogger(__name__)
 
@@ -220,7 +220,7 @@ def get_preview_pixmap_for_path(
 
         # 1. Vérification dans l'archive indexée
         if archive_index:
-            entry = find_file_in_index(archive_index, image_path)
+            entry = find_image_in_index(archive_index, image_path)
             if entry:
                 pix = load_pixmap_safely(
                     file_path=entry.extracted_disk_path,
