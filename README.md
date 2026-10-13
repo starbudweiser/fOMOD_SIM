@@ -13,7 +13,7 @@ fOMOD_SIM/
 ├── dist/                   # build web (généré par npm run build, non versionné)
 ├── packaging/              # spec PyInstaller
 ├── scripts/                # lanceurs .command (Python, Web)
-├── assets/                 # icônes (icon.icns, icon_1024.png)
+├── assets/                 # icônes (icon.icns, icon.png)
 ├── tests/                  # tests unitaires Python
 ├── docs/                   # documentation FR/EN, fiche Nexus, captures
 └── _ARCHIVES/              # versions de référence (non versionné)

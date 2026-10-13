@@ -16,7 +16,7 @@ a = Analysis(
     binaries=[],
     datas=[
         (icon_path, 'assets'),
-        (os.path.join(assets_dir, 'icon_1024.png'), 'assets'),
+        (os.path.join(assets_dir, 'icon.png'), 'assets'),
     ],
     hiddenimports=[
         'py7zr',

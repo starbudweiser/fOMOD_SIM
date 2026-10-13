@@ -36,7 +36,7 @@ if ! command -v python3 &> /dev/null; then
     echo "Erreur : python3 est requis pour la compilation." >&2
     exit 1
 fi
-for f in "$SPEC" "$ROOT/assets/icon.icns" "$ROOT/assets/icon_1024.png" "$ROOT/python_app/main.py"; do
+for f in "$SPEC" "$ROOT/assets/icon.icns" "$ROOT/assets/icon.png" "$ROOT/python_app/main.py"; do
     if [ ! -f "$f" ]; then
         echo "Erreur : fichier requis introuvable : $f" >&2
         exit 1
@@ -59,11 +59,9 @@ if [ ! -d "$BUILT_APP" ]; then
     exit 1
 fi
 
-# 4. Signature ad hoc + vérification
-echo "Signature de l'application macOS (ad hoc)..."
-xattr -cr "$BUILT_APP"
-codesign --force --deep --sign - "$BUILT_APP"
-codesign --verify --deep --strict --verbose=1 "$BUILT_APP"
+# 4. Signature stable (certificat local, _tools) + vérification
+echo "Signature de l'application macOS..."
+"$(cd "$ROOT/.." && pwd)/_tools/sign_app.sh" "$BUILT_APP"
 
 # 5. Livraison à la racine du projet
 rm -rf "$TARGET"

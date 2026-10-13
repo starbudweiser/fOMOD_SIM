@@ -30,14 +30,14 @@ Paquets système éventuels pour Qt (Ubuntu/Debian) : `libxcb-cursor0 libxkbcomm
 ```bash
 pip install pyinstaller py7zr PyQt6
 pyinstaller --noconfirm --windowed --name fOMODSIM \
-  --add-data "assets/icon_1024.png:assets" python_app/main.py
+  --add-data "assets/icon.png:assets" python_app/main.py
 ```
 
 Résultat : `dist/fOMODSIM/` (dossier distribuable). Adapter `packaging/fOMODSIM.spec` en retirant le bloc `BUNDLE` (spécifique macOS).
 
 ### Option 3 — AppImage / Flatpak
 
-- **AppImage** : empaqueter `dist/fOMODSIM/` avec `appimagetool` + fichier `.desktop` + `icon_1024.png`.
+- **AppImage** : empaqueter `dist/fOMODSIM/` avec `appimagetool` + fichier `.desktop` + `icon.png`.
 - **Flatpak** : manifeste avec runtime `org.kde.Platform` + dépendances Python (`PyQt6`, `py7zr`).
 
 ### Points d'attention
@@ -57,7 +57,7 @@ Résultat : `dist/fOMODSIM/` (dossier distribuable). Adapter `packaging/fOMODSIM
 Type=Application
 Name=fOMODSIM
 Exec=/opt/fomodsim/fOMODSIM %f
-Icon=/opt/fomodsim/assets/icon_1024.png
+Icon=/opt/fomodsim/assets/icon.png
 Categories=Utility;Game;
 MimeType=application/zip;application/x-7z-compressed;application/vnd.rar;
 ```
@@ -88,14 +88,14 @@ Run **on Linux** (PyInstaller cannot cross-compile):
 ```bash
 pip install pyinstaller py7zr PyQt6
 pyinstaller --noconfirm --windowed --name fOMODSIM \
-  --add-data "assets/icon_1024.png:assets" python_app/main.py
+  --add-data "assets/icon.png:assets" python_app/main.py
 ```
 
 Output: `dist/fOMODSIM/` (distributable folder). If you reuse `packaging/fOMODSIM.spec`, remove the `BUNDLE` block (macOS-only).
 
 ### Option 3 — AppImage / Flatpak
 
-- **AppImage**: package `dist/fOMODSIM/` with `appimagetool` + a `.desktop` file + `icon_1024.png`.
+- **AppImage**: package `dist/fOMODSIM/` with `appimagetool` + a `.desktop` file + `icon.png`.
 - **Flatpak**: manifest using the `org.kde.Platform` runtime + Python deps (`PyQt6`, `py7zr`).
 
 ### Caveats
@@ -115,7 +115,7 @@ Output: `dist/fOMODSIM/` (distributable folder). If you reuse `packaging/fOMODSI
 Type=Application
 Name=fOMODSIM
 Exec=/opt/fomodsim/fOMODSIM %f
-Icon=/opt/fomodsim/assets/icon_1024.png
+Icon=/opt/fomodsim/assets/icon.png
 Categories=Utility;Game;
 MimeType=application/zip;application/x-7z-compressed;application/vnd.rar;
 ```
