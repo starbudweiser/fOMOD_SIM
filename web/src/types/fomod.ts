@@ -65,6 +65,8 @@ export interface FomodOption {
   flags: Record<string, string>; // flags set when this option is selected
   dependencies?: FomodDependencies;
   typeDescriptor?: string | TypeDescriptor;
+  /** Masters des plugins de l'option hors jeu de base et hors mod (voir fomodPlugins.annotateOptionMasters) */
+  requiredMasters?: string[];
 }
 
 

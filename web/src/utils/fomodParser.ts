@@ -334,54 +334,100 @@ export function computeOptionType(
   installedBasenames: Set<string>,
   activeFlags: Record<string, string>
 ): string {
-  if (!opt.typeDescriptor) {
-    return 'Optional';
-  }
-
-  if (typeof opt.typeDescriptor === 'string') {
-    return opt.typeDescriptor;
-  }
-
-  const td = opt.typeDescriptor;
-  for (const pat of td.patterns) {
-    if (evaluateDependencies(pat.dependencies, installedBasenames, activeFlags)) {
-      return pat.typeName;
+  if (opt.typeDescriptor) {
+    if (typeof opt.typeDescriptor === 'string') return opt.typeDescriptor;
+    for (const pat of opt.typeDescriptor.patterns) {
+      if (evaluateDependencies(pat.dependencies, installedBasenames, activeFlags)) return pat.typeName;
     }
+    return opt.typeDescriptor.defaultType;
   }
-
-  return td.defaultType;
+  if (opt.dependencies) {
+    return evaluateDependencies(opt.dependencies, installedBasenames, activeFlags) ? 'Recommended' : 'Optional';
+  }
+  return 'Optional';
 }
 
+export const PLUGIN_EXTS = ['.esp', '.esm', '.esl'];
+/** Masters du jeu de base, toujours présents */
+export const VANILLA_MASTERS = new Set(['skyrim.esm', 'update.esm', 'dawnguard.esm', 'hearthfires.esm', 'dragonborn.esm']);
+export const isPluginName = (name: string) => PLUGIN_EXTS.some(ext => name.toLowerCase().endsWith(ext));
+const alnum = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+function hasFileDep(deps: FomodDependencies | undefined): boolean {
+  if (!deps) return false;
+  return deps.fileDependencies.length > 0 || deps.nestedDependencies.some(hasFileDep);
+}
+
+/**
+ * Heuristique de secours : un fichier ou dossier « patch » de l'option porte le nom d'un plugin
+ * présent dans Data (« SkyUI_SE Patch.esp » pour « skyui_se.esp »). Le jeu de base est ignoré.
+ */
+export function patchNameHint(opt: FomodOption, installedBasenames: Set<string>): boolean {
+  const names = [...opt.files, ...opt.folders]
+    .map(i => alnum(norm(i.source).split('/').pop() || ''))
+    .filter(n => n.includes('patch'));
+  if (names.length === 0) return false;
+  for (const inst of installedBasenames) {
+    if (!isPluginName(inst) || VANILLA_MASTERS.has(inst)) continue;
+    const stem = alnum(inst.replace(/\.[^.]+$/, ''));
+    if (stem.length >= 4 && names.some(n => n.includes(stem))) return true;
+  }
+  return false;
+}
+
+/**
+ * null si l'option n'a pas de master extérieur au mod (ou Data non défini) ; sinon vrai si tous
+ * ses masters sont présents dans Data.
+ */
+export function mastersSatisfied(opt: FomodOption, installedBasenames: Set<string>): boolean | null {
+  if (installedBasenames.size === 0 || !opt.requiredMasters || opt.requiredMasters.length === 0) return null;
+  return opt.requiredMasters.every(m => installedBasenames.has(m));
+}
+
+/**
+ * Vrai si l'option est justifiée par le contenu du dossier Data (badge « Auto ») : condition de
+ * fichier satisfaite, masters de ses plugins présents, ou patch nommé d'après un plugin présent.
+ */
+export function optionMatchesInstalled(
+  opt: FomodOption,
+  installedBasenames: Set<string>,
+  activeFlags: Record<string, string>
+): boolean {
+  if (installedBasenames.size === 0) return false;
+  const td = opt.typeDescriptor;
+  if (td && typeof td !== 'string') {
+    // seul le premier motif satisfait détermine le type
+    const pat = td.patterns.find(p => evaluateDependencies(p.dependencies, installedBasenames, activeFlags));
+    if (pat && ['recommended', 'required', 'highlight'].includes(pat.typeName.toLowerCase()) && hasFileDep(pat.dependencies)) {
+      return true;
+    }
+  }
+  if (hasFileDep(opt.dependencies) && evaluateDependencies(opt.dependencies, installedBasenames, activeFlags)) {
+    return true;
+  }
+  const ok = mastersSatisfied(opt, installedBasenames);
+  if (ok !== null) return ok;
+  return patchNameHint(opt, installedBasenames);
+}
+
+/** Détermine si une option ou un patch doit être cochée d'office. */
 export function isOptionRecommended(
   opt: FomodOption,
   installedBasenames: Set<string>,
   activeFlags: Record<string, string>
 ): boolean {
   const computed = computeOptionType(opt, installedBasenames, activeFlags).toLowerCase();
-  if (computed === 'recommended' || computed === 'required') {
-    return true;
-  }
+  if (computed === 'recommended' || computed === 'required' || computed === 'highlight') return true;
+  if (computed === 'notusable') return false;
 
-  if (opt.dependencies && opt.dependencies.fileDependencies.length > 0) {
-    if (evaluateDependencies(opt.dependencies, installedBasenames, activeFlags)) {
-      return true;
-    }
-  }
+  // Dépendance de fichier directe explicite
+  if (hasFileDep(opt.dependencies)) return evaluateDependencies(opt.dependencies, installedBasenames, activeFlags);
 
-  if (installedBasenames.size > 0) {
-    for (const f of opt.files) {
-      const b = f.source.replace(/\\/g, '/').split('/').pop()?.trim().toLowerCase() || '';
-      if (b.endsWith('.esp') || b.endsWith('.esm') || b.endsWith('.esl')) {
-        for (const inst of installedBasenames) {
-          if (inst.length > 4 && (inst.includes(b) || b.includes(inst))) {
-            return true;
-          }
-        }
-      }
-    }
-  }
+  // Masters des plugins de l'option : présents → cochée ; un manquant → jamais cochée d'office
+  const ok = mastersSatisfied(opt, installedBasenames);
+  if (ok !== null) return ok;
 
-  return false;
+  return installedBasenames.size > 0 && patchNameHint(opt, installedBasenames);
 }
 
 

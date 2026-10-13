@@ -22,6 +22,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
 from ..fomod.types import StagingResult
 from ..fomod.staging import export_staging_to_zip
+from ..fomod.plugins import scan_data_dir
 
 try:
     from ..locales import get_i18n
@@ -377,11 +378,7 @@ class DataDirModal(QDialog):
             self.path_val_lbl.setText(folder)
             found = set()
             try:
-                for _root, _, files in os.walk(folder):
-                    for f in files:
-                        lower = f.lower()
-                        if lower.endswith((".esp", ".esm", ".esl", ".dll", ".bsa", ".ba2")):
-                            found.add(lower)
+                found = scan_data_dir(folder)
             except Exception as e:
                 logger.error("Erreur scan dossier Data: %s", e)
             self.plugins = found

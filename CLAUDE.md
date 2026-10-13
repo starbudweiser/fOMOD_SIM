@@ -24,10 +24,10 @@ cd web && npm run build                   # sortie dans ../dist (racine du proje
 
 ## Structure
 
-- `python_app/fomod/` : moteur — `parser.py` (ModuleConfig.xml), `session.py` (déroulé de l'installeur : visibilité, sélections, règles), `staging.py`, `preview.py` (choix de l'image d'aperçu), `extractor.py` (archives, lecture différée), `types.py`, `demo_mod.py`.
+- `python_app/fomod/` : moteur — `parser.py` (ModuleConfig.xml), `plugins.py` (scan Data, masters des .esp), `session.py` (déroulé de l'installeur : visibilité, sélections, règles), `staging.py`, `preview.py` (choix de l'image d'aperçu), `extractor.py` (archives, lecture différée), `types.py`, `demo_mod.py`.
 - `python_app/gui/` : `main_window.py`, `modals.py`, `mod_info_dialog.py`, `preview_generator.py`, `workers.py` (QThread), `theme.py` (QSS).
 - `python_app/locales/` et `web/src/locales/` : un fichier par langue (`fr`, `en`, `es`, `it`).
-- `web/src/utils/` : équivalents TypeScript du moteur (`fomodParser.ts`, `fomodSession.ts`, `fomodStaging.ts`, `fomodPreview.ts`, `archiveExtractor.ts` via libarchive.js en WebAssembly).
+- `web/src/utils/` : équivalents TypeScript du moteur (`fomodParser.ts`, `fomodSession.ts`, `fomodStaging.ts`, `fomodPreview.ts`, `fomodPlugins.ts`, `archiveExtractor.ts` via libarchive.js en WebAssembly).
 - `packaging/fOMODSIM.spec` : PyInstaller, chemins calculés depuis `SPECPATH`.
 - `docs/` : README FR/EN, `LINUX_PORT.md`, `NEXUS_PAGE.md`, captures.
 - `_ARCHIVES/` : versions de référence (v1.0.0), non versionné. Ne pas y toucher.
@@ -53,7 +53,8 @@ cd web && npm run build                   # sortie dans ../dist (racine du proje
 - **Choix de ModuleConfig.xml / info.xml** : `select_fomod_xml` (Python) et `selectFomodXml` (web) privilégient le fichier rangé dans un dossier `fomod/`, puis le moins profond. Les extracteurs ne lisent plus ces XML au fil de l'eau : ils passent tous par cette sélection après le réancrage.
 - **Archives 7z** : `py7zr` ≥ 1.0 a supprimé `SevenZipFile.read()`. `_read_7z_members` utilise `extract(factory=BytesIOFactory(...))`, avec repli sur `read()` pour les anciennes versions. Une erreur à cet endroit faisait passer toutes les archives 7z pour « sans ModuleConfig.xml ».
 - **Images DDS/TGA** : `QPixmap` ne les lit pas ; repli sur Pillow → RGBA → `QPixmap`.
-- **Scan du dossier Data** : seuls `.esp`, `.esm`, `.esl`, `.dll`, `.bsa`, `.ba2` comptent pour la détection des dépendances (badge « Auto »).
+- **Scan du dossier Data** (`plugins.scan_data_dir` / `fomodPlugins.scanDataDirHandle`) : seuls `.esp`, `.esm`, `.esl`, `.dll`, `.bsa`, `.ba2` comptent ; les dossiers d'assets (`textures`, `meshes`, `sound`…) ne sont pas parcourus. Les 5 masters du jeu de base sont supposés présents.
+- **Pré-sélection selon Data** : `annotate_option_masters` lit l'en-tête TES4 (MAST) des plugins de chaque option ; `required_masters` = masters hors jeu de base et hors plugins du mod. Data défini : masters tous présents → option cochée, un manquant → jamais cochée d'office (sauf type Recommended/Required de l'auteur). Dans un choix unique, l'option justifiée par Data passe devant la recommandation générique. Badge « Auto » = `option_matches_installed` (parser), pas `is_option_recommended`. Changer de Data recalcule tous les choix par défaut (les choix manuels sont perdus).
 - **Threads** : ne pas utiliser `QThread.terminate()` (interblocages GIL qui figeaient les tests).
 - **Polices Qt** : police système `.AppleSystemUIFont` et `'Menlo', monospace` pour éviter les avertissements `qt.qpa.fonts` et ~1,5 s de blocage au démarrage.
 - **Signature** : `build_app.sh` appelle `../_tools/sign_app.sh` (certificat local stable « sKYCRASH Local Signing », jamais ad hoc, sinon macOS redemande les autorisations à chaque build). Pas de notarisation : sur un autre Mac, clic droit → Ouvrir.

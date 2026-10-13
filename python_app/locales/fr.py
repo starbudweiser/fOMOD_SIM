@@ -88,6 +88,12 @@ STRINGS = {
         "tip1": "Assurez-vous que l'archive contient bien un fichier fomod/ModuleConfig.xml.",
         "tip2": "Si votre archive est un fichier .RAR ou .7Z dans un format propriétaire très récent (ex: RAR5), vous pouvez la convertir en .ZIP standard ou glisser le dossier décompressé.",
     },
+    "stagingWarning": {
+        "title": "Aucun dossier de staging",
+        "message": "Aucun dossier de destination n'a été choisi pour le staging.\n\nSélectionnez le dossier où écrire les fichiers qui seraient installés.",
+        "choose": "Choisir un dossier…",
+        "cancel": "Annuler",
+    },
     "modals": {
         "openMod": {
             "title": "Ouvrir un FOMOD",

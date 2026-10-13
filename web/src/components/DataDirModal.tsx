@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useI18n } from '../locales';
+import { isDataScanFile, isInSkippedDataDir, scanDataDirHandle } from '../utils/fomodPlugins';
 
 interface DataDirModalProps {
   isOpen: boolean;
@@ -78,22 +79,7 @@ export default function DataDirModal({
       if ('showDirectoryPicker' in window) {
         // Chromium File System Access API
         const dirHandle = await (window as unknown as { showDirectoryPicker: () => Promise<FileSystemDirectoryHandle> }).showDirectoryPicker();
-        const found = new Set<string>();
-
-        // Recursive scan helper
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        async function scanDir(handle: any) {
-          for await (const entry of handle.values()) {
-            if (entry.kind === 'file') {
-              const nameLower = entry.name.toLowerCase();
-              found.add(nameLower);
-            } else if (entry.kind === 'directory' && entry.name !== '__MACOSX') {
-              await scanDir(entry);
-            }
-          }
-        }
-
-        await scanDir(dirHandle);
+        const found = await scanDataDirHandle(dirHandle);
         const p = dirHandle.name ? `${dirHandle.name}` : 'Data';
         onApplyData(p, found);
         onClose();
@@ -107,8 +93,8 @@ export default function DataDirModal({
           if (!files || files.length === 0) return;
           const found = new Set<string>();
           for (let i = 0; i < files.length; i++) {
-            const nameLower = files[i].name.toLowerCase();
-            found.add(nameLower);
+            const rel = (files[i] as File & { webkitRelativePath?: string }).webkitRelativePath || files[i].name;
+            if (isDataScanFile(files[i].name) && !isInSkippedDataDir(rel)) found.add(files[i].name.toLowerCase());
           }
           onApplyData('Data', found);
           onClose();

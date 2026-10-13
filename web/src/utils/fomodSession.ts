@@ -18,7 +18,7 @@ import {
   FomodOption,
   FomodStep,
 } from '../types/fomod';
-import { computeOptionType, evaluateDependencies, isOptionRecommended } from './fomodParser';
+import { computeOptionType, evaluateDependencies, isOptionRecommended, optionMatchesInstalled } from './fomodParser';
 
 export interface SessionState {
   selected: Set<string>;
@@ -93,6 +93,10 @@ function defaultsForGroup(group: FomodGroup, installed: Set<string>, flags: Reco
   const recommended = usable.filter(
     o => types.get(o.id) === 'recommended' || isOptionRecommended(o, installed, flags)
   );
+  // Options justifiées par le dossier Data d'abord : dans un choix unique, le patch du mod détecté
+  // passe devant la recommandation générique de l'auteur (tri stable)
+  const matched = new Set(recommended.filter(o => optionMatchesInstalled(o, installed, flags)));
+  recommended.sort((a, b) => Number(!matched.has(a)) - Number(!matched.has(b)));
   const union = [...required, ...recommended.filter(o => !required.includes(o))];
 
   switch (group.type) {

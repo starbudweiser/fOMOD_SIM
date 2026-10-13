@@ -390,42 +390,94 @@ def compute_option_type(
     return "Recommended" if opt.is_default else "Optional"
 
 
+PLUGIN_EXTS = (".esp", ".esm", ".esl")
+# Masters du jeu de base, toujours présents
+VANILLA_MASTERS = {"skyrim.esm", "update.esm", "dawnguard.esm", "hearthfires.esm", "dragonborn.esm"}
+_NON_ALNUM = re.compile(r"[^a-z0-9]")
+
+
+def _has_file_dep(deps: Optional[FomodDependencies]) -> bool:
+    if not deps:
+        return False
+    return bool(deps.file_dependencies) or any(_has_file_dep(d) for d in deps.nested_dependencies)
+
+
+def patch_name_hint(opt: FomodOption, installed_basenames: Set[str]) -> bool:
+    """Heuristique de secours : un fichier ou dossier « patch » de l'option porte le nom d'un plugin
+    présent dans Data (« SkyUI_SE Patch.esp » pour « skyui_se.esp »). Le jeu de base est ignoré."""
+    names = [
+        _NON_ALNUM.sub("", norm(item.source).split("/")[-1].lower())
+        for item in list(opt.files) + list(opt.folders)
+    ]
+    names = [n for n in names if "patch" in n]
+    if not names:
+        return False
+    for inst in installed_basenames:
+        if not inst.endswith(PLUGIN_EXTS) or inst in VANILLA_MASTERS:
+            continue
+        stem = _NON_ALNUM.sub("", inst.rsplit(".", 1)[0])
+        if len(stem) >= 4 and any(stem in n for n in names):
+            return True
+    return False
+
+
+def masters_satisfied(opt: FomodOption, installed_basenames: Set[str]) -> Optional[bool]:
+    """None si l'option n'a pas de master extérieur au mod (ou Data non défini) ; sinon vrai si
+    tous ses masters sont présents dans Data."""
+    if not installed_basenames or not opt.required_masters:
+        return None
+    return opt.required_masters <= installed_basenames
+
+
+def option_matches_installed(
+    opt: FomodOption,
+    installed_basenames: Set[str],
+    active_flags: Dict[str, str],
+) -> bool:
+    """Vrai si l'option est justifiée par le contenu du dossier Data (badge « Auto ») : condition
+    de fichier satisfaite, masters de ses plugins présents, ou patch nommé d'après un plugin présent."""
+    if not installed_basenames:
+        return False
+    if opt.type_descriptor:
+        for pat in opt.type_descriptor.patterns:
+            if evaluate_dependencies(pat.dependencies, installed_basenames, active_flags):
+                if pat.type_name.lower() in ("recommended", "required", "highlight") and _has_file_dep(pat.dependencies):
+                    return True
+                break  # seul le premier motif satisfait détermine le type
+    if _has_file_dep(opt.dependencies) and evaluate_dependencies(opt.dependencies, installed_basenames, active_flags):
+        return True
+    ok = masters_satisfied(opt, installed_basenames)
+    if ok is not None:
+        return ok
+    return patch_name_hint(opt, installed_basenames)
+
+
 def is_option_recommended(
     opt: FomodOption,
     installed_basenames: Set[str],
     active_flags: Dict[str, str],
 ) -> bool:
     """Détermine si une option ou patch doit être auto-cochée."""
-    eff_type = compute_option_type(opt, installed_basenames, active_flags)
-    eff_lower = eff_type.lower()
+    eff_lower = compute_option_type(opt, installed_basenames, active_flags).lower()
     if eff_lower in ("recommended", "required", "highlight"):
         return True
     if eff_lower == "notusable":
         return False
 
     # Dépendance de fichier directe explicite
-    if opt.dependencies:
-        has_file_dep = bool(opt.dependencies.file_dependencies) or any(
-            d.file_dependencies for d in opt.dependencies.nested_dependencies
-        )
-        if evaluate_dependencies(opt.dependencies, installed_basenames, active_flags):
-            if has_file_dep:
-                return True
-        elif has_file_dep:
-            return False
+    if _has_file_dep(opt.dependencies):
+        return evaluate_dependencies(opt.dependencies, installed_basenames, active_flags)
 
-    # Détection intelligente heuristique si installed_basenames est fourni
-    if installed_basenames:
-        all_items = opt.files + [FomodFileItem(source=fo.source, destination=fo.destination) for fo in opt.folders]
-        for item in all_items:
-            fn = item.source.split("/")[-1].lower()
-            if "patch" in fn:
-                for inst in installed_basenames:
-                    clean_inst = inst.rsplit(".", 1)[0]
-                    if len(clean_inst) >= 4 and clean_inst in fn.replace(" ", "").replace("-", "").replace("_", ""):
-                        return True
+    # Masters des plugins de l'option : présents → cochée ; un manquant → jamais cochée d'office
+    ok = masters_satisfied(opt, installed_basenames)
+    if ok is not None:
+        return ok
 
-    return opt.is_default
+    if installed_basenames and patch_name_hint(opt, installed_basenames):
+        return True
+
+    # Le type calculé (motifs du typeDescriptor compris) a déjà tranché : pas de repli sur le type par défaut
+    return False
 
 
 RE_XML_DECL = re.compile(r"^\s*<\?xml[^>]*\?>", re.I)

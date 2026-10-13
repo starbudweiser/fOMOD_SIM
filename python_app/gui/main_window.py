@@ -19,6 +19,7 @@ from PyQt6.QtWidgets import (
     QFileDialog,
     QMessageBox,
     QComboBox,
+    QSizePolicy,
 )
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QPainter, QColor, QPen, QBrush, QFont, QResizeEvent, QPixmap
@@ -38,8 +39,9 @@ from ..fomod.types import (
 from ..fomod.parser import (
     parse_module_config_xml,
     parse_info_xml,
-    evaluate_dependencies,
+    option_matches_installed,
 )
+from ..fomod.plugins import annotate_option_masters
 from ..fomod.demo_mod import get_demo_mod
 from ..fomod.staging import export_staging_to_directory
 from ..fomod.session import InstallSession
@@ -59,46 +61,36 @@ except (ImportError, ValueError):
 
 
 
-def check_option_matches_installed_dependency(
-    opt: FomodOption,
-    installed_basenames: Set[str],
-    active_flags: Dict[str, str],
-) -> bool:
-    """Vérifie si une option/patch correspond spécifiquement à une dépendance satisfaite issue du dossier Data."""
-    if not installed_basenames:
-        return False
-
-    if opt.type_descriptor:
-        for pat in opt.type_descriptor.patterns:
-            if evaluate_dependencies(pat.dependencies, installed_basenames, active_flags):
-                if pat.type_name.lower() in ("recommended", "required", "highlight"):
-                    has_file_dep = bool(pat.dependencies.file_dependencies) or any(
-                        d.file_dependencies for d in pat.dependencies.nested_dependencies
-                    )
-                    if has_file_dep:
-                        return True
-
-    if opt.dependencies:
-        has_file_dep = bool(opt.dependencies.file_dependencies) or any(
-            d.file_dependencies for d in opt.dependencies.nested_dependencies
-        )
-        if has_file_dep and evaluate_dependencies(opt.dependencies, installed_basenames, active_flags):
-            return True
-
-    # Heuristique sur les fichiers de patch
-    all_items = opt.files + [FomodFileItem(source=fo.source, destination=fo.destination) for fo in opt.folders]
-    for item in all_items:
-        fn = item.source.split("/")[-1].lower()
-        if "patch" in fn:
-            for inst in installed_basenames:
-                clean_inst = inst.rsplit(".", 1)[0]
-                if len(clean_inst) >= 4 and clean_inst in fn.replace(" ", "").replace("-", "").replace("_", ""):
-                    return True
-
-    return False
-
-
 logger = logging.getLogger(__name__)
+
+
+class FitImageLabel(QLabel):
+    """Image d'aperçu ajustée à la place disponible (largeur de la colonne d'abord), centrée,
+    proportions conservées ; recalculée à chaque redimensionnement."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._source: Optional[QPixmap] = None
+        # Taille ignorée : le label prend la place que lui donne la mise en page, pas celle de l'image
+        self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Ignored)
+        self.setMinimumSize(1, 1)
+        self.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop)
+
+    def set_source(self, pixmap: Optional[QPixmap]) -> None:
+        self._source = pixmap if pixmap is not None and not pixmap.isNull() else None
+        self._rescale()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._rescale()
+
+    def _rescale(self) -> None:
+        if self._source is None or self.width() < 2 or self.height() < 2:
+            self.clear()
+            return
+        self.setPixmap(self._source.scaled(
+            self.size(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
+        ))
 
 
 def format_bytes(sz: int) -> str:
@@ -439,6 +431,7 @@ class MainWindow(QMainWindow):
         # Chemins de staging et data
         self.data_dir_path: Optional[str] = None
         self.staging_dir_path: str = "Bureau (Desktop)"
+        self.staging_dir_chosen: bool = False  # vrai une fois un dossier choisi par l'utilisateur
 
         # Tree widget invisible maintenu pour rétro-compatibilité
         self.staging_tree = QTreeWidget()
@@ -1289,16 +1282,15 @@ class MainWindow(QMainWindow):
         img_layout.setContentsMargins(0, 0, 0, 0)
         img_layout.setSpacing(0)
 
-        self.preview_image_label = QLabel()
-        self.preview_image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.preview_image_label = FitImageLabel()
         self.preview_image_label.setCursor(Qt.CursorShape.PointingHandCursor)
         self.preview_image_label.setToolTip("Cliquer pour afficher dans sa taille réelle")
         self.preview_image_label.mousePressEvent = lambda _e: self._open_image_preview_modal()
         preview_img_frame.mousePressEvent = lambda _e: self._open_image_preview_modal()
         img_layout.addWidget(self.preview_image_label)
 
-        layout.addWidget(preview_img_frame)
-        layout.addStretch()
+        # L'image occupe toute la place restante sous la description
+        layout.addWidget(preview_img_frame, 1)
         return col
 
     # =========================================================================
@@ -1319,6 +1311,8 @@ class MainWindow(QMainWindow):
         self.steps = steps
         self.required_files = req_files
         self.conditional_installs = cond_installs
+        # Masters des plugins de chaque option (pré-sélection des patchs selon le dossier Data)
+        annotate_option_masters(self.archive_index, steps)
         self.session = InstallSession(steps, req_files, cond_installs, self.installed_basenames)
         vis = self.session.visible_step_indices()
         self.current_step_idx = vis[0] if vis else 0
@@ -1438,7 +1432,7 @@ class MainWindow(QMainWindow):
                     first_option = opt
 
                 is_sel = opt.id in self.selected_option_ids
-                matches_dep = check_option_matches_installed_dependency(
+                matches_dep = option_matches_installed(
                     opt, self.installed_basenames, self.session.flags_before(self.current_step_idx)
                 )
 
@@ -1530,14 +1524,7 @@ class MainWindow(QMainWindow):
         """Met à jour instantanément la description et l'image d'aperçu."""
         self.active_preview_option = option
         self.preview_desc_label.setText(option.description or "(Aucune description disponible pour cette option)")
-        pixmap = self._preview_pixmap(option)
-        scaled = pixmap.scaled(
-            540, 338,
-            Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.SmoothTransformation,
-        )
-        self.preview_image_label.setPixmap(scaled)
-        self.preview_image_label.setFixedSize(scaled.width(), scaled.height())
+        self.preview_image_label.set_source(self._preview_pixmap(option))
 
     def _on_select_option(self, option: FomodOption, group: FomodGroup):
         """Bascule la sélection d'une option selon les règles du groupe et met à jour le staging."""
@@ -1602,6 +1589,8 @@ class MainWindow(QMainWindow):
         try:
             if not self.session:
                 return
+            if not self._ensure_staging_dir():
+                return
             res = self.session.build_staging(self.archive_index)
             self.current_staging_result = res
 
@@ -1660,11 +1649,29 @@ class MainWindow(QMainWindow):
         self._trigger_background_staging()
         self._update_header()
 
-    def _pick_staging_destination(self):
+    def _pick_staging_destination(self) -> bool:
         folder = QFileDialog.getExistingDirectory(self, "Sélectionner le dossier de destination du Staging")
         if folder:
             self.staging_dir_path = folder
+            self.staging_dir_chosen = True
             self.dest_path_label.setText(folder)
+        return bool(folder)
+
+    def _ensure_staging_dir(self) -> bool:
+        """Vrai si un dossier de staging existant a été choisi ; sinon avertit et propose d'en choisir un."""
+        if self.staging_dir_chosen and os.path.isdir(self.staging_dir_path):
+            return True
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Warning)
+        box.setWindowTitle(self.i18n.get("stagingWarning", "title"))
+        # macOS n'affiche pas le titre de fenêtre d'une alerte : titre en texte principal
+        box.setText(self.i18n.get("stagingWarning", "title"))
+        box.setInformativeText(self.i18n.get("stagingWarning", "message"))
+        choose = box.addButton(self.i18n.get("stagingWarning", "choose"), QMessageBox.ButtonRole.AcceptRole)
+        box.addButton(self.i18n.get("stagingWarning", "cancel"), QMessageBox.ButtonRole.RejectRole)
+        box.setDefaultButton(choose)
+        box.exec()
+        return box.clickedButton() is choose and self._pick_staging_destination()
 
     def _pick_archive_file(self):
         path, _ = QFileDialog.getOpenFileName(

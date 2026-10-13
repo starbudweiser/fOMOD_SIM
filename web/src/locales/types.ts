@@ -70,6 +70,12 @@ export interface Translations {
     tip1: string;
     tip2: string;
   };
+  stagingWarning: {
+    title: string;
+    message: string;
+    choose: string;
+    cancel: string;
+  };
   modals: {
     openMod: {
       title: string;

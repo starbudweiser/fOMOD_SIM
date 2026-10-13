@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional, Set, Any
 from enum import Enum
 
 
@@ -84,6 +84,8 @@ class FomodOption:
     dependencies: Optional[FomodDependencies] = None
     type_descriptor: Optional[TypeDescriptor] = None
     is_default: bool = False
+    # Masters des plugins de l'option hors jeu de base et hors mod (voir plugins.annotate_option_masters)
+    required_masters: Set[str] = field(default_factory=set)
 
 
 @dataclass

@@ -38,6 +38,7 @@ a = Analysis(
         'python_app.fomod.demo_mod',
         'python_app.fomod.session',
         'python_app.fomod.preview',
+        'python_app.fomod.plugins',
         'PIL', 'PIL.Image', 'PIL.ImageQt', 'PIL.DdsImagePlugin',
         'python_app.gui',
         'python_app.gui.main_window',

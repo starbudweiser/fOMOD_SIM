@@ -16,8 +16,9 @@ import {
   parseInfoXml,
   norm,
   findFileInIndex,
-  isOptionRecommended,
+  optionMatchesInstalled,
 } from './utils/fomodParser';
+import { annotateOptionMasters } from './utils/fomodPlugins';
 import {
   SessionState,
   initialState,
@@ -49,6 +50,7 @@ import DataDirModal from './components/DataDirModal';
 import StagingResultModal from './components/StagingResultModal';
 import OpenModModal from './components/OpenModModal';
 import FolderSelectModal from './components/FolderSelectModal';
+import StagingWarningModal from './components/StagingWarningModal';
 import LanguageSelector from './components/LanguageSelector';
 import { useI18n } from './locales';
 
@@ -105,6 +107,7 @@ export default function App() {
   const [directWriteSuccess, setDirectWriteSuccess] = useState<boolean>(false);
   const [stagingModalOpen, setStagingModalOpen] = useState<boolean>(false);
   const [folderSelectModalOpen, setFolderSelectModalOpen] = useState<boolean>(false);
+  const [stagingWarningOpen, setStagingWarningOpen] = useState<boolean>(false);
 
   // Mod info modal & open mod modal
   const [infoModalOpen, setInfoModalOpen] = useState<boolean>(false);
@@ -220,7 +223,7 @@ export default function App() {
   }, [currentStepIdx]);
 
   // --- CHARGEMENT MOD DÉMO ---
-  const loadSampleMod = (sample: SampleMod) => {
+  const loadSampleMod = async (sample: SampleMod) => {
     try {
       setIsLoading(true);
       const parsedConfig = parseModuleConfigXml(sample.moduleConfigXml);
@@ -235,6 +238,7 @@ export default function App() {
       setArchiveIndex(index);
       setModuleHeaderImage(parsedConfig.moduleHeaderImage);
 
+      await annotateOptionMasters(index, parsedConfig.steps);
       const firstIdx = initSelections(parsedConfig.steps, installedBasenames);
       setCurrentStepIdx(firstIdx);
 
@@ -347,6 +351,7 @@ export default function App() {
       setArchiveIndex(newIndex);
       setModuleHeaderImage(parsedConfig.moduleHeaderImage);
 
+      await annotateOptionMasters(newIndex, parsedConfig.steps);
       const firstIdx = initSelections(parsedConfig.steps, installedBasenames);
       setCurrentStepIdx(firstIdx);
 
@@ -406,6 +411,7 @@ export default function App() {
       setArchiveIndex(index);
       setModuleHeaderImage(parsedConfig.moduleHeaderImage);
 
+      await annotateOptionMasters(index, parsedConfig.steps);
       const firstIdx = initSelections(parsedConfig.steps, installedBasenames);
       setCurrentStepIdx(firstIdx);
 
@@ -569,7 +575,12 @@ export default function App() {
 
   // Générateur de Staging : COPIE PHYSIQUE DIRECTE DANS LE RÉPERTOIRE SÉLECTIONNÉ
   // Les fichiers sont écrits directement dans le dossier choisi (pas de sous-dossier "Staging").
-  const handleGenerateStaging = async () => {
+  // Sans dossier choisi, un avertissement invite à en sélectionner un.
+  const handleGenerateStaging = async (handle: FileSystemDirectoryHandle | null = stagingDirectoryHandle) => {
+    if (!handle) {
+      setStagingWarningOpen(true);
+      return;
+    }
     const selectedOpts = computeSelectedOptions(steps, session.selected, installedBasenames);
     if (selectedOpts.length === 0 && requiredFiles.length === 0) {
       alert('Avertissement : Aucune option sélectionnée.');
@@ -589,57 +600,40 @@ export default function App() {
     setStagingResult(res);
     setDirectWriteSuccess(false);
 
-    // 1. Si un dossier local est déjà lié
-    if (stagingDirectoryHandle) {
-      try {
-        setIsLoading(true);
-        setStatusMessage(`Copie directe des ${res.totalCopied} fichiers vers "${stagingDirectoryHandle.name}"...`);
-        await writeStagingToLocalDirectoryHandle(stagingDirectoryHandle, res);
-        setIsLoading(false);
-        setStatusMessage('');
-        setDirectWriteSuccess(true);
-        setStagingModalOpen(true);
-        return;
-      } catch (writeErr) {
-        setIsLoading(false);
-        setStatusMessage('');
-        console.error('Erreur écriture locale directe:', writeErr);
-        alert('Erreur lors de la copie des fichiers dans le dossier : ' + writeErr);
-        setStagingModalOpen(true);
-        return;
-      }
+    try {
+      setIsLoading(true);
+      setStatusMessage(`Copie directe des ${res.totalCopied} fichiers vers "${handle.name}"...`);
+      await writeStagingToLocalDirectoryHandle(handle, res);
+      setDirectWriteSuccess(true);
+    } catch (writeErr) {
+      console.error('Erreur écriture locale directe:', writeErr);
+      alert('Erreur lors de la copie des fichiers dans le dossier : ' + writeErr);
+    } finally {
+      setIsLoading(false);
+      setStatusMessage('');
+      setStagingModalOpen(true);
     }
+  };
 
-    // 2. Si pas encore de dossier lié, demander le dossier à l'utilisateur
-    if ('showDirectoryPicker' in window) {
-      try {
-        // @ts-expect-error File System Access API
-        const picked: FileSystemDirectoryHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-        setStagingDirectoryHandle(picked);
-        setStagingDirPath(`/${picked.name}`);
-
-        setIsLoading(true);
-        setStatusMessage(`Copie directe des ${res.totalCopied} fichiers vers "${picked.name}"...`);
-        await writeStagingToLocalDirectoryHandle(picked, res);
-        setIsLoading(false);
-        setStatusMessage('');
-        setDirectWriteSuccess(true);
-        setStagingModalOpen(true);
-        return;
-      } catch (err: unknown) {
-        const errorName = (err as { name?: string }).name;
-        if (errorName === 'AbortError') {
-          // L'utilisateur a simplement fermé la fenêtre
-          return;
-        }
-        console.warn('showDirectoryPicker bloqué ou indisponible :', err);
-        setFolderSelectModalOpen(true);
-        return;
-      }
+  /** Choix du dossier depuis l'avertissement, puis génération dans ce dossier. */
+  const handleChooseStagingFolder = async () => {
+    setStagingWarningOpen(false);
+    if (!('showDirectoryPicker' in window)) {
+      // Navigateur sans File System Access API : modal de choix (ou ouverture en onglet)
+      setFolderSelectModalOpen(true);
+      return;
     }
-
-    // 3. Navigateur sans File System Access API ou bloqué : ouvrir le modal pour choisir le dossier ou ouvrir en onglet
-    setFolderSelectModalOpen(true);
+    try {
+      // @ts-expect-error File System Access API
+      const picked: FileSystemDirectoryHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+      setStagingDirectoryHandle(picked);
+      setStagingDirPath(`/${picked.name}`);
+      await handleGenerateStaging(picked);
+    } catch (err: unknown) {
+      if ((err as { name?: string }).name === 'AbortError') return; // fenêtre fermée
+      console.warn('showDirectoryPicker bloqué ou indisponible :', err);
+      setFolderSelectModalOpen(true);
+    }
   };
 
   // Navigation : seules les étapes visibles sont parcourues
@@ -1013,7 +1007,7 @@ export default function App() {
 
             {/* Bouton Action Blue : Générer le Staging */}
             <button
-              onClick={handleGenerateStaging}
+              onClick={() => handleGenerateStaging()}
               className="w-full py-2.5 px-3 bg-[#0ea5e9] hover:bg-[#0284c7] active:bg-[#0369a1] text-white font-bold text-xs tracking-wide uppercase rounded transition-colors flex items-center justify-center gap-1 cursor-pointer shadow-sm mt-1 whitespace-nowrap"
             >
               <span>{strings.sidebar.generateStaging}</span>
@@ -1097,7 +1091,7 @@ export default function App() {
                               optionType(steps, session.selected, installedBasenames, opt).toLowerCase() === 'notusable';
 
                             // Dependency auto-select match indicator
-                            const matchesDep = isOptionRecommended(opt, installedBasenames, stepFlags);
+                            const matchesDep = optionMatchesInstalled(opt, installedBasenames, stepFlags);
 
                             return (
                               <div
@@ -1217,13 +1211,13 @@ export default function App() {
           <div className="w-full flex flex-col items-center justify-start overflow-hidden">
             <div
               onClick={() => setFullPreviewModalOpen(true)}
-              className="group relative w-full max-h-[560px] bg-[#1a1a1a] border border-[#333333] hover:border-[#0ea5e9] rounded p-1 cursor-pointer transition-all flex items-center justify-center overflow-hidden shadow-md"
+              className="group relative w-full cursor-pointer flex justify-center"
               title={strings.preview.clickToEnlarge}
             >
               <img
                 src={previewImgUrl || createSvgPlaceholder(strings.preview.defaultTitle, strings.preview.defaultSubtitle, '#1e293b', '#38bdf8')}
                 alt={strings.preview.defaultTitle}
-                className="max-h-[520px] max-w-full object-contain rounded select-none transition-transform group-hover:scale-[1.01]"
+                className="w-full h-auto max-h-[75vh] object-contain rounded select-none"
               />
               <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/75 text-[10px] text-[#aaa] rounded opacity-0 group-hover:opacity-100 transition-opacity">
                 {strings.preview.enlarge}
@@ -1262,6 +1256,12 @@ export default function App() {
           setInstalledBasenames(plugins);
           initSelections(steps, plugins);
         }}
+      />
+
+      <StagingWarningModal
+        isOpen={stagingWarningOpen}
+        onClose={() => setStagingWarningOpen(false)}
+        onChooseFolder={handleChooseStagingFolder}
       />
 
       <FolderSelectModal

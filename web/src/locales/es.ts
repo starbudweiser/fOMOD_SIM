@@ -72,6 +72,12 @@ export const es: Translations = {
     tip1: 'Asegúrese de que el archivo contenga un archivo fomod/ModuleConfig.xml.',
     tip2: 'Si su archivo es un .RAR o .7Z en un formato propietario muy reciente (p. ej., RAR5), puede convertirlo a .ZIP estándar o arrastrar la carpeta descomprimida.',
   },
+  stagingWarning: {
+    title: "Ninguna carpeta de staging",
+    message: "No se ha elegido ninguna carpeta de destino para el staging.\n\nSelecciona la carpeta donde escribir los archivos que se instalarían.",
+    choose: "Elegir una carpeta…",
+    cancel: "Cancelar",
+  },
   modals: {
     openMod: {
       title: 'Abrir un FOMOD',

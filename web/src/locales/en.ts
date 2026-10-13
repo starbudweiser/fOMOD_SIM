@@ -72,6 +72,12 @@ export const en: Translations = {
     tip1: 'Ensure the archive contains a fomod/ModuleConfig.xml file.',
     tip2: 'If your archive is a .RAR or .7Z in a very recent proprietary format (e.g. RAR5), you can convert it to standard .ZIP or drag the uncompressed folder.',
   },
+  stagingWarning: {
+    title: "No staging folder",
+    message: "No destination folder has been chosen for the staging.\n\nSelect the folder where the files that would be installed should be written.",
+    choose: "Choose a folder…",
+    cancel: "Cancel",
+  },
   modals: {
     openMod: {
       title: 'Open a FOMOD',

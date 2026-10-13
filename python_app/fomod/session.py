@@ -10,7 +10,7 @@ Reproduit le déroulé d'un installeur (Mod Organizer 2 / Vortex) :
 """
 from typing import Dict, List, Optional, Set, Tuple
 
-from .parser import compute_option_type, evaluate_dependencies, is_option_recommended
+from .parser import compute_option_type, evaluate_dependencies, is_option_recommended, option_matches_installed
 from .staging import build_staging
 from .types import (
     ArchiveIndex,
@@ -107,6 +107,9 @@ class InstallSession:
             o for o in usable
             if types[o.id] == "recommended" or is_option_recommended(o, self.installed_basenames, flags)
         ]
+        # Options justifiées par le dossier Data d'abord : dans un choix unique, le patch du mod
+        # détecté passe devant la recommandation générique de l'auteur
+        recommended.sort(key=lambda o: not option_matches_installed(o, self.installed_basenames, flags))
 
         if group.type == GroupType.SelectAll:
             return {o.id for o in group.options}
