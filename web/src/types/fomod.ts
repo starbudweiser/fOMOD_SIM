@@ -2,16 +2,20 @@ export interface FomodFileItem {
   source: string;
   destination: string;
   priority?: number;
+  /** Installé même si l'option n'est pas cochée (étape visible) */
   alwaysInstall?: boolean;
-  installIfMissing?: boolean;
+  /** Installé même non coché, sauf si l'option est « NotUsable » */
+  installIfUsable?: boolean;
 }
 
 export interface FomodFolderItem {
+  /** Distingue un <folder> d'un <file> dans les listes mixtes (requiredInstallFiles) */
+  isFolder?: boolean;
   source: string;
   destination: string;
   priority?: number;
   alwaysInstall?: boolean;
-  installIfMissing?: boolean;
+  installIfUsable?: boolean;
 }
 
 export type DependencyOperator = 'And' | 'Or' | 'Not';
@@ -31,6 +35,8 @@ export interface FomodDependencies {
   fileDependencies: FileDependency[];
   flagDependencies: FlagDependency[];
   nestedDependencies: FomodDependencies[];
+  /** Conditions non simulables (version du jeu, de FOMM, de SKSE…) : supposées satisfaites */
+  assumedTrue?: number;
 }
 
 export interface TypeDescriptorPattern {
@@ -83,6 +89,8 @@ export interface FomodStep {
   name: string;
   derivedLabel: string;
   groups: FomodGroup[];
+  /** Condition <visible> de l'étape (absente = toujours visible) */
+  visibility?: FomodDependencies;
   headerImage?: string;
   imagePath?: string;
 }

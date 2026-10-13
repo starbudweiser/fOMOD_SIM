@@ -8,6 +8,7 @@ import {
   FomodDependencies,
   FileDependency,
   FlagDependency,
+  DependencyOperator,
   GroupType,
   ArchiveIndex,
   VirtualFileEntry,
@@ -80,25 +81,25 @@ export function extractElementImage(el: Element | null | undefined): string | un
   return undefined;
 }
 
-// Case-insensitive lookup in ArchiveIndex with rich prefix and name normalization
+function withUrl(entry: VirtualFileEntry): VirtualFileEntry {
+  if (!entry.url && entry.blob) {
+    try {
+      entry.url = URL.createObjectURL(entry.blob);
+    } catch {
+      // URL d'objet indisponible (environnement sans DOM)
+    }
+  }
+  return entry;
+}
+
+// Recherche insensible à la casse dans l'index, avec variantes de préfixes FOMOD.
+// Les correspondances par suffixe portent sur des segments entiers (« mod.esp » ne trouve pas « mymod.esp »).
 export function findFileInIndex(index: ArchiveIndex, src: string): VirtualFileEntry | null {
-  if (!src) return null;
   const rawKey = norm(src);
   if (!rawKey) return null;
   const key = rawKey.toLowerCase();
 
-  // 1. Direct exact match
-  if (index.files.has(key)) {
-    const f = index.files.get(key)!;
-    if (!f.path.toLowerCase().includes('__macosx')) {
-      if (!f.url && f.blob) {
-        try { f.url = URL.createObjectURL(f.blob); } catch {}
-      }
-      return f;
-    }
-  }
-
-  // 2. Direct lookup across common prefixes / path variations
+  // 1. Correspondance exacte, puis variantes de préfixes fréquentes
   const variations = [
     key,
     key.replace(/^fomod\//, ''),
@@ -109,249 +110,223 @@ export function findFileInIndex(index: ArchiveIndex, src: string): VirtualFileEn
     `fomod/images/${key}`,
   ];
   for (const v of variations) {
-    if (index.files.has(v)) {
-      const f = index.files.get(v)!;
-      if (!f.path.toLowerCase().includes('__macosx')) {
-        if (!f.url && f.blob) {
-          try { f.url = URL.createObjectURL(f.blob); } catch {}
-        }
-        return f;
-      }
-    }
+    const f = index.files.get(v);
+    if (f && !v.includes('__macosx')) return withUrl(f);
   }
 
-  // 3. Suffix match in either direction:
-  // a) relKey ends with key (e.g. index has "images/packs/foo.jpg" and key is "packs/foo.jpg" or "foo.jpg")
-  // b) key ends with relKey (e.g. key is "fomod/images/foo.jpg" and index has "images/foo.jpg")
+  // 2. Suffixe sur segments entiers, dans les deux sens
   const suffixCands: VirtualFileEntry[] = [];
-  const suffixSlashKey = '/' + key;
+  const slashKey = '/' + key;
   for (const [relKey, entry] of index.files.entries()) {
     if (relKey.includes('__macosx')) continue;
-    if (
-      relKey === key ||
-      relKey.endsWith(key) ||
-      relKey.endsWith(suffixSlashKey) ||
-      key.endsWith('/' + relKey) ||
-      key.endsWith(relKey)
-    ) {
-      suffixCands.push(entry);
-    }
+    if (relKey.endsWith(slashKey) || key.endsWith('/' + relKey)) suffixCands.push(entry);
   }
   if (suffixCands.length > 0) {
-    // Sort by shortest path length
     suffixCands.sort((a, b) => a.path.length - b.path.length);
-    const chosen = suffixCands[0];
-    if (!chosen.url && chosen.blob) {
-      try { chosen.url = URL.createObjectURL(chosen.blob); } catch {}
-    }
-    return chosen;
+    return withUrl(suffixCands[0]);
   }
 
-  // 4. Basename match (si le FOMOD ne spécifie que le nom de fichier final)
-  const base = key.split('/').pop();
+  // 3. Même nom de fichier ailleurs dans l'archive
+  const base = key.split('/').pop() || '';
   if (base) {
-    const baseSlash = '/' + base;
     const baseCands: VirtualFileEntry[] = [];
     for (const [relKey, entry] of index.files.entries()) {
       if (relKey.includes('__macosx')) continue;
-      if (relKey === base || relKey.endsWith(baseSlash)) {
-        baseCands.push(entry);
-      }
+      if (relKey === base || relKey.endsWith('/' + base)) baseCands.push(entry);
     }
     if (baseCands.length > 0) {
       baseCands.sort((a, b) => a.path.length - b.path.length);
-      const chosen = baseCands[0];
-      if (!chosen.url && chosen.blob) {
-        try { chosen.url = URL.createObjectURL(chosen.blob); } catch {}
-      }
-      return chosen;
+      return withUrl(baseCands[0]);
     }
   }
 
-  // 5. Flexible normalized match (spaces, dashes, underscores, quotes, accents)
-  const sanitize = (s: string) =>
-    s
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/['"`’]/g, '')
-      .replace(/[-_.\s]+/g, '');
-
-  const keyClean = sanitize(key);
-  const baseClean = base ? sanitize(base) : '';
-
-  for (const [relKey, entry] of index.files.entries()) {
-    if (relKey.includes('__macosx')) continue;
-    const relClean = sanitize(relKey);
-    const relBaseClean = sanitize(relKey.split('/').pop() || '');
-
-    if (
-      relClean === keyClean ||
-      relClean.endsWith(keyClean) ||
-      keyClean.endsWith(relClean) ||
-      (baseClean && (relBaseClean === baseClean || relClean.endsWith(baseClean)))
-    ) {
-      if (!entry.url && entry.blob) {
-        try { entry.url = URL.createObjectURL(entry.blob); } catch {}
-      }
-      return entry;
-    }
-  }
-
-  // 6. Loose match en nettoyant les préfixes numérotés exotiques (ex: "00 Shared", "20 Main")
+  // 4. Préfixes numériques ignorés (« 00 Core/x.esp » ↔ « Core/x.esp »)
   const keyStripped = stripNumPrefix(key);
   for (const [relKey, entry] of index.files.entries()) {
     if (relKey.includes('__macosx')) continue;
-    if (stripNumPrefix(relKey) === keyStripped || stripNumPrefix(relKey).endsWith('/' + keyStripped)) {
-      if (!entry.url && entry.blob) {
-        try { entry.url = URL.createObjectURL(entry.blob); } catch {}
-      }
-      return entry;
-    }
+    const relStripped = stripNumPrefix(relKey);
+    if (relStripped === keyStripped || relStripped.endsWith('/' + keyStripped)) return withUrl(entry);
   }
 
   return null;
 }
 
+const IMAGE_EXTS = ['.png', '.jpg', '.jpeg', '.bmp', '.dds', '.tga', '.webp', '.gif'];
+
+/** Comme findFileInIndex, mais tolère une extension d'image différente de celle déclarée. */
+export function findImageInIndex(index: ArchiveIndex, src: string | undefined): VirtualFileEntry | null {
+  if (!src) return null;
+  const direct = findFileInIndex(index, src);
+  if (direct) return direct;
+  const key = norm(src).toLowerCase();
+  const last = key.split('/').pop() || '';
+  const stem = last.includes('.') ? key.slice(0, key.lastIndexOf('.')) : key;
+  for (const ext of IMAGE_EXTS) {
+    const alt = findFileInIndex(index, stem + ext);
+    if (alt) return alt;
+  }
+  return null;
+}
+
+/** Retrouve un dossier de l'archive (casse d'origine). Une source vide désigne la racine du mod. */
 export function findFolderInIndex(index: ArchiveIndex, src: string): string | null {
   const rawKey = norm(src);
-  if (!rawKey) return null;
+  if (!rawKey) return '';
   const key = rawKey.toLowerCase();
 
-  // 1. Direct exact match
-  if (index.dirs.has(key)) {
-    const orig = index.dirs.get(key)!;
-    if (!orig.toLowerCase().includes('__macosx')) return orig;
+  // 1. Correspondance exacte
+  const exact = index.dirs.get(key);
+  if (exact !== undefined && !key.includes('__macosx')) return exact;
+
+  // 2. Dossier implicite déduit des chemins de fichiers
+  const prefix = key + '/';
+  for (const [relKey, entry] of index.files.entries()) {
+    if (relKey.startsWith(prefix) && !relKey.includes('__macosx')) return entry.path.slice(0, rawKey.length);
   }
 
-  // 2. Suffix match (ex: src="Textures/Ava body" matching "00 Shared/Textures/Ava body")
+  // 3. Suffixe sur segments entiers
   const cands: string[] = [];
-  const slashKey = '/' + key;
   for (const [relKey, orig] of index.dirs.entries()) {
     if (relKey.includes('__macosx')) continue;
-    if (relKey === key || relKey.endsWith(slashKey) || relKey.endsWith(key)) {
-      cands.push(orig);
-    }
+    if (relKey.endsWith('/' + key) || key.endsWith('/' + relKey)) cands.push(orig);
   }
   if (cands.length > 0) {
     cands.sort((a, b) => a.length - b.length);
     return cands[0];
   }
 
-  // 3. Match sans préfixes numériques exotiques (ex: "00 Shared" vs "Shared", "20 Main" vs "Main")
+  // 4. Préfixes numériques ignorés, à parent identique
   const keyBn = stripNumPrefix(key);
+  const parentOf = (k: string) => (k.includes('/') ? k.slice(0, k.lastIndexOf('/')) : '');
   const prefixCands: string[] = [];
   for (const [relKey, orig] of index.dirs.entries()) {
     if (relKey.includes('__macosx')) continue;
-    const strippedRel = stripNumPrefix(relKey);
-    if (strippedRel === keyBn || strippedRel.endsWith('/' + keyBn)) {
-      prefixCands.push(orig);
-    }
+    if (parentOf(relKey) === parentOf(key) && stripNumPrefix(relKey) === keyBn) prefixCands.push(orig);
   }
   if (prefixCands.length > 0) {
     prefixCands.sort((a, b) => a.length - b.length);
     return prefixCands[0];
   }
 
-  // 4. Folder contained in files (si le dossier n'a pas été explicitement créé comme entrée séparée)
-  for (const [relKey] of index.files.entries()) {
-    if (relKey.includes('__macosx')) continue;
-    if (relKey.startsWith(key + '/') || relKey.includes('/' + key + '/')) {
-      const idx = relKey.indexOf(key);
-      const sub = relKey.substring(0, idx + key.length);
-      return sub;
-    }
-  }
-
   return null;
 }
 
+// ---------------------------------------------------------------- lecture XML : utilitaires
+
+const lname = (el: Element) => el.localName.toLowerCase();
+
+function childrenOf(el: Element | null | undefined, ...names: string[]): Element[] {
+  if (!el) return [];
+  const wanted = new Set(names.map(n => n.toLowerCase()));
+  return Array.from(el.children).filter(c => wanted.has(lname(c)));
+}
+
+function childOf(el: Element | null | undefined, ...names: string[]): Element | null {
+  return childrenOf(el, ...names)[0] || null;
+}
+
+/** Lit un attribut sans tenir compte de la casse de son nom. */
+function attr(el: Element | null | undefined, name: string): string | null {
+  if (!el) return null;
+  const direct = el.getAttribute(name);
+  if (direct !== null) return direct;
+  const lower = name.toLowerCase();
+  for (const a of Array.from(el.attributes)) {
+    if (a.name.toLowerCase() === lower) return a.value;
+  }
+  return null;
+}
+
+function descendants(root: Element, ...names: string[]): Element[] {
+  const wanted = new Set(names.map(n => n.toLowerCase()));
+  return Array.from(root.getElementsByTagName('*')).filter(e => wanted.has(lname(e)));
+}
+
+// ---------------------------------------------------------------- dépendances
+
 export function parseDependenciesNode(node: Element): FomodDependencies {
-  const operator = (node.getAttribute('operator') || 'And') as 'And' | 'Or' | 'Not';
+  const opRaw = (attr(node, 'operator') || 'And').trim().toLowerCase();
+  const operator: DependencyOperator = opRaw === 'or' ? 'Or' : opRaw === 'not' ? 'Not' : 'And';
   const fileDependencies: FileDependency[] = [];
   const flagDependencies: FlagDependency[] = [];
   const nestedDependencies: FomodDependencies[] = [];
+  let assumedTrue = 0;
 
-  for (let i = 0; i < node.children.length; i++) {
-    const child = node.children[i];
-    const tag = child.localName.toLowerCase();
-
+  for (const child of Array.from(node.children)) {
+    const tag = lname(child);
     if (tag === 'filedependency') {
-      const file = child.getAttribute('file') || '';
-      const state = (child.getAttribute('state') || 'Active') as 'Active' | 'Inactive';
-      if (file) {
-        fileDependencies.push({ file: norm(file), state });
-      }
+      const file = attr(child, 'file') || '';
+      const state = (attr(child, 'state') || 'Active') as FileDependency['state'];
+      if (file) fileDependencies.push({ file: norm(file), state });
     } else if (tag === 'flagdependency') {
-      const flag = child.getAttribute('flag') || '';
-      const value = child.getAttribute('value') || '';
-      if (flag) {
-        flagDependencies.push({ flag, value });
-      }
+      const flag = attr(child, 'flag') || '';
+      if (flag) flagDependencies.push({ flag, value: attr(child, 'value') || '' });
     } else if (tag === 'dependencies') {
       nestedDependencies.push(parseDependenciesNode(child));
+    } else if (tag.endsWith('dependency')) {
+      // gameDependency, fommDependency, foseDependency… : non simulables, supposées satisfaites
+      assumedTrue++;
     }
   }
 
-  return {
-    operator,
-    fileDependencies,
-    flagDependencies,
-    nestedDependencies,
-  };
+  return { operator, fileDependencies, flagDependencies, nestedDependencies, assumedTrue };
 }
 
+/** <visible> ou <pattern> contiennent les conditions directement ou via un <dependencies>. */
+export function parseConditionContainer(node: Element | null | undefined): FomodDependencies | undefined {
+  if (!node) return undefined;
+  if (lname(node) === 'dependencies') return parseDependenciesNode(node);
+  const inner = childrenOf(node, 'dependencies');
+  const hasDirect = Array.from(node.children).some(c => lname(c).endsWith('dependency'));
+  if (inner.length === 1 && !hasDirect) return parseDependenciesNode(inner[0]);
+  return parseDependenciesNode(node);
+}
+
+const FLAG_FALSE = ['', 'inactive', 'false', 'missing', '0', 'off', 'none', 'no', 'disabled'];
+const FLAG_TRUE = ['active', 'true', '1', 'on', 'yes', 'enabled'];
+
+/** Comparaison exacte d'abord, puis équivalences usuelles On/True/Active. Flag non défini = chaîne vide. */
 export function checkFlagValue(currVal: string | undefined, expectedVal: string): boolean {
-  const c = (currVal || '').trim().toLowerCase();
-  const e = (expectedVal || '').trim().toLowerCase();
-  if (!c) {
-    return ['inactive', 'false', '0', 'missing', 'none'].includes(e);
-  }
-  return c === e;
+  const c = (currVal || '').trim();
+  const e = (expectedVal || '').trim();
+  if (c === e) return true;
+  const cl = c.toLowerCase();
+  const el = e.toLowerCase();
+  if (cl === el) return true;
+  if (FLAG_FALSE.includes(el)) return FLAG_FALSE.includes(cl);
+  if (FLAG_TRUE.includes(el)) return FLAG_TRUE.includes(cl);
+  return false;
 }
 
+/** Les plugins présents dans le dossier Data sont considérés comme actifs. */
 export function evaluateDependencies(
   deps: FomodDependencies | undefined,
   installedBasenames: Set<string>,
   activeFlags: Record<string, string>
 ): boolean {
   if (!deps) return true;
-
-  const results: boolean[] = [];
+  const results: boolean[] = Array(deps.assumedTrue || 0).fill(true);
 
   for (const fd of deps.fileDependencies) {
-    const base = fd.file.replace(/\\/g, '/').split('/').pop()?.trim().toLowerCase() || fd.file.toLowerCase();
-    const isInst = installedBasenames.has(base);
-    const st = fd.state.toLowerCase();
-    if (st === 'active') {
-      results.push(isInst);
-    } else if (st === 'inactive' || st === 'missing') {
-      results.push(!isInst);
-    } else {
-      results.push(isInst);
-    }
+    const base = fd.file.replace(/\\/g, '/').split('/').pop()?.trim().toLowerCase() || '';
+    const present = installedBasenames.has(base);
+    const st = (fd.state || 'Active').toLowerCase();
+    if (st === 'missing') results.push(!present);
+    else if (st === 'inactive') results.push(false);
+    else results.push(present);
   }
-
   for (const flagDep of deps.flagDependencies) {
-    const currVal = activeFlags[flagDep.flag];
-    results.push(checkFlagValue(currVal, flagDep.value));
+    results.push(checkFlagValue(activeFlags[flagDep.flag], flagDep.value));
   }
-
   for (const nested of deps.nestedDependencies) {
     results.push(evaluateDependencies(nested, installedBasenames, activeFlags));
   }
 
   if (results.length === 0) return true;
-
   const op = deps.operator.toLowerCase();
-  if (op === 'or') {
-    return results.some(Boolean);
-  } else if (op === 'not') {
-    return !results.every(Boolean);
-  } else {
-    // Default 'and'
-    return results.every(Boolean);
-  }
+  if (op === 'or') return results.some(Boolean);
+  if (op === 'not') return !results.some(Boolean);
+  return results.every(Boolean);
 }
 
 export function computeOptionType(
@@ -412,13 +387,78 @@ export function isOptionRecommended(
 
 export function sanitizeXml(xml: string): string {
   if (!xml) return '';
-  // 1. Remove XML declaration or force encoding UTF-8
-  let clean = xml.replace(/<\?xml[^>]*\?>/i, '<?xml version="1.0" encoding="UTF-8"?>');
-  // 2. Fix unescaped ampersands (e.g. "CBBE & Bodyslide" -> "CBBE &amp; Bodyslide")
-  clean = clean.replace(/&(?!(amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)/g, '&amp;');
+  let clean = xml.replace(/^﻿/, '').replace(/\u0000/g, '');
+  // La déclaration <?xml encoding="UTF-16"?> est fausse une fois le texte décodé
+  clean = clean.replace(/^\s*<\?xml[^>]*\?>/i, '<?xml version="1.0" encoding="UTF-8"?>');
+  clean = clean.replace(/[\u0001-\u0008\u000B\u000C\u000E-\u001F]/g, '');
+  // Esperluettes nues (« Tops & Bottoms »)
+  clean = clean.replace(/&(?!([a-zA-Z]+|#\d+|#x[0-9a-fA-F]+);)/g, '&amp;');
   return clean;
 }
 
+/** Attribut order (Explicit | Ascending | Descending) ; sans attribut, l'ordre du document est conservé (MO2). */
+function ordered(elements: Element[], container: Element | null): Element[] {
+  const order = (attr(container, 'order') || '').trim().toLowerCase();
+  if (order !== 'ascending' && order !== 'descending') return elements;
+  const sorted = [...elements].sort((a, b) =>
+    (attr(a, 'name') || '').localeCompare(attr(b, 'name') || '', undefined, { sensitivity: 'base' })
+  );
+  return order === 'descending' ? sorted.reverse() : sorted;
+}
+
+const truthy = (v: string | null) => ['true', '1', 'yes'].includes((v || '').trim().toLowerCase());
+
+/** <file>/<folder> d'un conteneur. Destination absente = même chemin que la source ; vide = racine. */
+function parseFileList(container: Element | null): (FomodFileItem | FomodFolderItem)[] {
+  const out: (FomodFileItem | FomodFolderItem)[] = [];
+  if (!container) return out;
+  for (const el of descendants(container, 'file', 'folder')) {
+    const rawSrc = attr(el, 'source');
+    if (rawSrc === null) continue;
+    const source = norm(rawSrc);
+    const rawDst = attr(el, 'destination');
+    const destination = rawDst === null ? source : norm(rawDst);
+    const priority = parseInt(attr(el, 'priority') || '0', 10) || 0;
+    const item = {
+      source,
+      destination,
+      priority,
+      alwaysInstall: truthy(attr(el, 'alwaysInstall')),
+      installIfUsable: truthy(attr(el, 'installIfUsable')),
+    };
+    if (lname(el) === 'file') {
+      if (source) out.push(item);
+    } else {
+      out.push({ ...item, isFolder: true });
+    }
+  }
+  return out;
+}
+
+export const isFolderItem = (i: FomodFileItem | FomodFolderItem): boolean => (i as FomodFolderItem).isFolder === true;
+
+function parseTypeDescriptor(plEl: Element): TypeDescriptor | undefined {
+  const tdEl = childOf(plEl, 'typeDescriptor');
+  if (!tdEl) return undefined;
+  const dtEl = childOf(tdEl, 'dependencyType');
+  if (dtEl) {
+    const defaultType = attr(childOf(dtEl, 'defaultType'), 'name') || 'Optional';
+    const patterns: TypeDescriptorPattern[] = childrenOf(childOf(dtEl, 'patterns'), 'pattern').map(patEl => ({
+      dependencies: parseConditionContainer(childOf(patEl, 'dependencies')),
+      typeName: attr(childOf(patEl, 'type'), 'name') || 'Optional',
+    }));
+    return { defaultType, patterns };
+  }
+  const tEl = childOf(tdEl, 'type');
+  return tEl ? { defaultType: attr(tEl, 'name') || 'Optional', patterns: [] } : undefined;
+}
+
+const textOf = (el: Element | null) => el?.textContent?.trim() || '';
+
+/**
+ * Analyse ModuleConfig.xml selon le schéma ModConfig 5.0 (installSteps > installStep >
+ * optionalFileGroups > group > plugins > plugin), avec tolérance aux variantes rencontrées.
+ */
 export function parseModuleConfigXml(xmlText: string): {
   moduleName: string;
   moduleHeaderImage?: string;
@@ -429,241 +469,108 @@ export function parseModuleConfigXml(xmlText: string): {
   const cleanedXml = sanitizeXml(xmlText);
   const parser = new DOMParser();
   let doc: Document = parser.parseFromString(cleanedXml, 'application/xml');
-
-  const parserError = doc.querySelector('parsererror');
-  if (parserError) {
-    console.warn('Erreur XML standard, tentative en mode HTML permissif...', parserError.textContent);
-    try {
-      doc = parser.parseFromString(cleanedXml, 'text/html');
-    } catch {
-      // continuer avec doc d'origine
-    }
+  if (doc.querySelector('parsererror')) {
+    console.warn('Erreur XML standard, tentative en mode HTML permissif...');
+    doc = parser.parseFromString(cleanedXml, 'text/html');
   }
+  const root = doc.documentElement;
 
-  const root = doc.documentElement || doc.body;
   const moduleName =
-    root.querySelector('moduleName, ModuleName')?.textContent?.trim() ||
-    root.getAttribute('name') ||
-    root.getAttribute('Name') ||
-    'Mod Skyrim';
+    textOf(childOf(root, 'moduleName')) || textOf(descendants(root, 'moduleName')[0] || null) || attr(root, 'name') || 'Mod Skyrim';
+  const moduleHeaderImage = extractElementImage(childOf(root, 'moduleImage') || descendants(root, 'moduleImage', 'headerImage')[0]);
 
-  const moduleHeaderImgEl = root.querySelector('headerImage, HeaderImage, moduleConfiguration > headerImage, moduleConfiguration > HeaderImage');
-  const moduleHeaderImage = extractElementImage(moduleHeaderImgEl) || extractElementImage(root);
+  const requiredInstallFiles = descendants(root, 'requiredInstallFiles').flatMap(n => parseFileList(n));
 
-  // Read RequiredInstallFiles if present
-  const requiredInstallFiles: (FomodFileItem | FomodFolderItem)[] = [];
-  const reqNode = root.querySelector('requiredInstallFiles, RequiredInstallFiles');
-  if (reqNode) {
-    const fileNodes = reqNode.querySelectorAll('file, File');
-    fileNodes.forEach(fn => {
-      const src = norm(fn.getAttribute('source') || fn.getAttribute('Source'));
-      const dst = norm(fn.getAttribute('destination') || fn.getAttribute('Destination'));
-      const prio = parseInt(fn.getAttribute('priority') || fn.getAttribute('Priority') || '0', 10);
-      if (src) requiredInstallFiles.push({ source: src, destination: dst, priority: prio });
-    });
-    const folderNodes = reqNode.querySelectorAll('folder, Folder');
-    folderNodes.forEach(fn => {
-      const src = norm(fn.getAttribute('source') || fn.getAttribute('Source'));
-      const dst = norm(fn.getAttribute('destination') || fn.getAttribute('Destination'));
-      const prio = parseInt(fn.getAttribute('priority') || fn.getAttribute('Priority') || '0', 10);
-      if (src) requiredInstallFiles.push({ source: src, destination: dst, priority: prio });
-    });
-  }
+  const stepsContainer = childOf(root, 'installSteps');
+  const stepElements = stepsContainer
+    ? ordered(childrenOf(stepsContainer, 'installStep'), stepsContainer)
+    : descendants(root, 'installStep');
 
-  // Steps
-  const stepElements: Element[] = [];
-  const allSteps = doc.querySelectorAll('installStep, InstallStep');
-  allSteps.forEach(s => stepElements.push(s));
+  const steps: FomodStep[] = stepElements.map((stepEl, stepIdx) => {
+    const stepName = (attr(stepEl, 'name') || '').trim() || textOf(childOf(stepEl, 'name')) || `Étape ${stepIdx + 1}`;
+    const visibility = parseConditionContainer(childOf(stepEl, 'visible'));
 
-  // If no installStep tags found, look for standalone groups under optionalFileGroups or moduleConfiguration
-  if (stepElements.length === 0) {
-    const standaloneGroups = doc.querySelectorAll('optionalFileGroups > group, optionalFileGroups > optionalFileGroup, moduleConfiguration > group');
-    if (standaloneGroups.length > 0) {
-      // Create a virtual step containing these groups
-      const virtualStepEl = doc.createElement('installStep');
-      virtualStepEl.setAttribute('name', "Options d'installation");
-      const virtualGrpContainer = doc.createElement('optionalFileGroups');
-      standaloneGroups.forEach(g => virtualGrpContainer.appendChild(g.cloneNode(true)));
-      virtualStepEl.appendChild(virtualGrpContainer);
-      stepElements.push(virtualStepEl);
-    }
-  }
-
-  const rawSteps: FomodStep[] = stepElements.map((stepEl, stepIdx) => {
-    const stepName =
-      stepEl.getAttribute('name')?.trim() ||
-      stepEl.querySelector('name')?.textContent?.trim() ||
-      `Étape ${stepIdx + 1}`;
-
-    const stepHeaderImage = extractElementImage(stepEl);
-
-    const groupElements: Element[] = [];
-    const children = stepEl.children;
-    for (let c = 0; c < children.length; c++) {
-      const child = children[c];
-      const tag = child.localName.toLowerCase();
-      if (tag === 'optionalfilegroups' || tag === 'groups') {
-        for (let g = 0; g < child.children.length; g++) {
-          groupElements.push(child.children[g]);
-        }
-      } else if (tag === 'group' || tag === 'optionalfilegroup') {
-        groupElements.push(child);
-      }
-    }
-
-    if (groupElements.length === 0) {
-      // Search recursively
-      const found = stepEl.querySelectorAll('group, optionalFileGroup');
-      found.forEach(g => groupElements.push(g));
-    }
+    const groupsContainer = childOf(stepEl, 'optionalFileGroups');
+    const groupElements = groupsContainer
+      ? ordered(childrenOf(groupsContainer, 'group'), groupsContainer)
+      : descendants(stepEl, 'group', 'optionalFileGroup');
 
     const groups: FomodGroup[] = groupElements.map((grpEl, grpIdx) => {
-      const groupName =
-        grpEl.getAttribute('name')?.trim() ||
-        grpEl.querySelector(':scope > name')?.textContent?.trim() ||
-        `Groupe ${grpIdx + 1}`;
+      const groupName = (attr(grpEl, 'name') || '').trim() || textOf(childOf(grpEl, 'name')) || `Groupe ${grpIdx + 1}`;
+      const rawType = (attr(grpEl, 'type') || 'SelectAny').trim().toLowerCase();
+      const type: GroupType =
+        (['SelectExactlyOne', 'SelectAtLeastOne', 'SelectAtMostOne', 'SelectAny', 'SelectAll'] as GroupType[]).find(
+          t => t.toLowerCase() === rawType
+        ) || 'SelectAny';
 
-      const grpHeaderImage = extractElementImage(grpEl);
-
-      const rawType = (grpEl.getAttribute('type') || 'SelectExactlyOne') as GroupType;
-      const type: GroupType = [
-        'SelectExactlyOne',
-        'SelectAtLeastOne',
-        'SelectAtMostOne',
-        'SelectAny',
-        'SelectAll',
-      ].includes(rawType)
-        ? rawType
-        : 'SelectExactlyOne';
-
-      const pluginElements: Element[] = [];
-      const grpChildren = grpEl.children;
-      for (let p = 0; p < grpChildren.length; p++) {
-        const pch = grpChildren[p];
-        const ptag = pch.localName.toLowerCase();
-        if (ptag === 'plugins' || ptag === 'options') {
-          for (let op = 0; op < pch.children.length; op++) {
-            pluginElements.push(pch.children[op]);
-          }
-        } else if (ptag === 'plugin' || ptag === 'option') {
-          pluginElements.push(pch);
-        }
-      }
-
-      if (pluginElements.length === 0) {
-        const found = grpEl.querySelectorAll('plugin, option');
-        found.forEach(pl => pluginElements.push(pl));
-      }
+      const pluginsContainer = childOf(grpEl, 'plugins');
+      const pluginElements = pluginsContainer
+        ? ordered(childrenOf(pluginsContainer, 'plugin'), pluginsContainer)
+        : descendants(grpEl, 'plugin', 'option');
 
       const options: FomodOption[] = pluginElements.map((plEl, plIdx) => {
-        let optName =
-          plEl.getAttribute('name')?.trim() ||
-          plEl.querySelector(':scope > name, :scope > text')?.textContent?.trim() ||
-          '';
+        const items = parseFileList(childOf(plEl, 'files'));
+        const files = items.filter(i => !isFolderItem(i));
+        const folders = items.filter(isFolderItem);
 
+        let optName = (attr(plEl, 'name') || '').trim() || textOf(childOf(plEl, 'name', 'text'));
         if (!optName) {
-          const fileNode = plEl.querySelector('file, folder');
-          if (fileNode) {
-            const src = norm(fileNode.getAttribute('source'));
-            optName = src.split('/').pop() || `Option ${plIdx + 1}`;
-          } else {
-            optName = `Option ${plIdx + 1}`;
-          }
+          const first = files[0] || folders[0];
+          optName = first ? first.source.split('/').pop() || `Option ${plIdx + 1}` : `Option ${plIdx + 1}`;
         }
 
-        const desc = plEl.querySelector('description')?.textContent?.trim() || '';
-        const imagePath = extractElementImage(plEl);
-
-        const files: FomodFileItem[] = [];
-        plEl.querySelectorAll(':scope > files > file, :scope file').forEach(fn => {
-          const s = norm(fn.getAttribute('source'));
-          const d = norm(fn.getAttribute('destination'));
-          const prio = parseInt(fn.getAttribute('priority') || '0', 10);
-          if (s) files.push({ source: s, destination: d, priority: prio });
-        });
-
-        const folders: FomodFolderItem[] = [];
-        plEl.querySelectorAll(':scope > files > folder, :scope folder').forEach(fn => {
-          const s = norm(fn.getAttribute('source'));
-          const d = norm(fn.getAttribute('destination'));
-          const prio = parseInt(fn.getAttribute('priority') || '0', 10);
-          if (s) folders.push({ source: s, destination: d, priority: prio });
-        });
-
+        // Flags : <flag name="X">valeur</flag> — la valeur est le texte de la balise
         const flags: Record<string, string> = {};
-        plEl.querySelectorAll('conditionFlags flag').forEach(flEl => {
-          const fn = flEl.getAttribute('name');
-          const fv = flEl.getAttribute('value') || 'true';
-          if (fn) flags[fn] = fv;
-        });
-
-        let dependencies: FomodDependencies | undefined;
-        const depEl = plEl.querySelector(
-          'dependencies, visible > dependencies, typeDescriptor dependencies'
-        );
-        if (depEl) {
-          dependencies = parseDependenciesNode(depEl);
-        }
-
-        let typeDescriptor: string | TypeDescriptor | undefined;
-        const tdEl = plEl.querySelector('typeDescriptor');
-        if (tdEl) {
-          const dtNode = tdEl.querySelector('defaultType');
-          const tNode = tdEl.querySelector(':scope > type');
-          const defaultType = dtNode?.getAttribute('name') || tNode?.getAttribute('name') || 'Optional';
-          const patterns: TypeDescriptorPattern[] = [];
-          const patternEls = tdEl.querySelectorAll('patterns > pattern');
-          patternEls.forEach(patEl => {
-            const patDepEl = patEl.querySelector('dependencies');
-            const patDeps = patDepEl ? parseDependenciesNode(patDepEl) : undefined;
-            const patTypeEl = patEl.querySelector('type');
-            const patTypeName = patTypeEl?.getAttribute('name') || 'Optional';
-            patterns.push({ dependencies: patDeps, typeName: patTypeName });
-          });
-          typeDescriptor = { defaultType, patterns };
+        for (const flEl of childrenOf(childOf(plEl, 'conditionFlags'), 'flag')) {
+          const fname = attr(flEl, 'name');
+          if (fname) flags[fname] = flEl.textContent !== null && flEl.textContent !== '' ? flEl.textContent.trim() : attr(flEl, 'value') || '';
         }
 
         return {
           id: `step-${stepIdx}-grp-${grpIdx}-opt-${plIdx}`,
           name: optName,
-          description: desc,
-          imagePath,
+          description: textOf(childOf(plEl, 'description')),
+          imagePath: extractElementImage(childOf(plEl, 'image')) || extractElementImage(plEl),
           files,
           folders,
           flags,
-          dependencies,
-          typeDescriptor,
+          // Dépendances directes sur le plugin (hors schéma, vieux FOMOD)
+          dependencies: parseConditionContainer(childOf(plEl, 'dependencies')),
+          typeDescriptor: parseTypeDescriptor(plEl),
         };
       });
 
-      return {
-        id: `step-${stepIdx}-grp-${grpIdx}`,
-        name: groupName,
-        type,
-        options,
-        headerImage: grpHeaderImage,
-        imagePath: grpHeaderImage,
-      };
+      const grpHeaderImage = extractElementImage(childOf(grpEl, 'image', 'headerImage'));
+      return { id: `step-${stepIdx}-grp-${grpIdx}`, name: groupName, type, options, headerImage: grpHeaderImage, imagePath: grpHeaderImage };
     });
 
-    const fallback = `Étape ${stepIdx + 1}`;
-    const derivedLabel = deriveStepLabel(stepName, groups, fallback);
-
+    const stepHeaderImage = extractElementImage(childOf(stepEl, 'image', 'headerImage'));
     return {
       id: `step-${stepIdx}`,
       name: stepName,
-      derivedLabel,
+      derivedLabel: deriveStepLabel(stepName, groups, `Étape ${stepIdx + 1}`),
       groups,
+      visibility,
       headerImage: stepHeaderImage,
       imagePath: stepHeaderImage,
     };
   });
 
-  const deduplicated = dedupeSteps(rawSteps);
+  const conditionalFileInstalls: ConditionalInstallPattern[] = [];
+  for (const cNode of descendants(root, 'conditionalFileInstalls')) {
+    for (const patEl of childrenOf(childOf(cNode, 'patterns'), 'pattern')) {
+      const items = parseFileList(childOf(patEl, 'files'));
+      conditionalFileInstalls.push({
+        dependencies: parseConditionContainer(childOf(patEl, 'dependencies')),
+        files: items.filter(i => !isFolderItem(i)),
+        folders: items.filter(isFolderItem),
+      });
+    }
+  }
 
-  if (deduplicated.length === 0) {
-    // Si aucune étape n'est définie mais que le mod a été chargé, créer une étape d'accueil/confirmation
-    deduplicated.push({
+  if (steps.length === 0 && requiredInstallFiles.length > 0) {
+    // Mod sans étapes : une étape de confirmation pour installer les fichiers requis
+    steps.push({
       id: 'step_default',
       name: 'Installation du Mod',
       derivedLabel: 'Options de base',
@@ -671,14 +578,14 @@ export function parseModuleConfigXml(xmlText: string): {
         {
           id: 'grp_default',
           name: 'Composants du mod',
-          type: 'SelectExactlyOne',
+          type: 'SelectAll',
           options: [
             {
               id: 'opt_default',
               name: 'Installer les fichiers par défaut',
               description: 'Ce mod est configuré pour une installation automatique sans options personnalisées supplémentaires.',
-              files: requiredInstallFiles.filter(f => !f.source.endsWith('/')).map(f => f as FomodFileItem),
-              folders: requiredInstallFiles.filter(f => f.source.endsWith('/')).map(f => f as FomodFolderItem),
+              files: [],
+              folders: [],
               flags: {},
               typeDescriptor: 'Required',
             },
@@ -688,38 +595,7 @@ export function parseModuleConfigXml(xmlText: string): {
     });
   }
 
-  const conditionalFileInstalls: ConditionalInstallPattern[] = [];
-  const condPatternEls = doc.querySelectorAll('conditionalFileInstalls > patterns > pattern, conditionalFileInstalls pattern');
-  condPatternEls.forEach(patEl => {
-    const depNode = patEl.querySelector('dependencies');
-    const pDeps = depNode ? parseDependenciesNode(depNode) : undefined;
-    const pFiles: FomodFileItem[] = [];
-    const pFolders: FomodFolderItem[] = [];
-
-    patEl.querySelectorAll('files > file, file').forEach(fn => {
-      const s = norm(fn.getAttribute('source'));
-      const d = norm(fn.getAttribute('destination'));
-      const prio = parseInt(fn.getAttribute('priority') || '0', 10);
-      if (s) pFiles.push({ source: s, destination: d, priority: prio });
-    });
-
-    patEl.querySelectorAll('files > folder, folder').forEach(fn => {
-      const s = norm(fn.getAttribute('source'));
-      const d = norm(fn.getAttribute('destination'));
-      const prio = parseInt(fn.getAttribute('priority') || '0', 10);
-      if (s) pFolders.push({ source: s, destination: d, priority: prio });
-    });
-
-    conditionalFileInstalls.push({ dependencies: pDeps, files: pFiles, folders: pFolders });
-  });
-
-  return {
-    moduleName,
-    moduleHeaderImage,
-    steps: deduplicated,
-    requiredInstallFiles,
-    conditionalFileInstalls,
-  };
+  return { moduleName, moduleHeaderImage, steps, requiredInstallFiles, conditionalFileInstalls };
 }
 
 export function deriveStepLabel(stepName: string, groups: FomodGroup[], fallback: string): string {
@@ -766,39 +642,10 @@ export function deriveStepLabel(stepName: string, groups: FomodGroup[], fallback
   return fallback;
 }
 
-export function dedupeSteps(steps: FomodStep[]): FomodStep[] {
-  const seenSignatures = new Set<string>();
-  const output: FomodStep[] = [];
-
-  for (const step of steps) {
-    const sig = step.groups
-      .map(g =>
-        g.options
-          .map(
-            o =>
-              `${o.name}:` +
-              [...o.files.map(f => f.source), ...o.folders.map(fo => fo.source)]
-                .sort()
-                .join(',')
-          )
-          .sort()
-          .join('|')
-      )
-      .join('||');
-
-    if (!seenSignatures.has(sig)) {
-      seenSignatures.add(sig);
-      output.push(step);
-    }
-  }
-
-  return output;
-}
-
 export function parseInfoXml(xmlText: string): FomodMetadata {
   try {
     const parser = new DOMParser();
-    const doc = parser.parseFromString(xmlText, 'application/xml');
+    const doc = parser.parseFromString(sanitizeXml(xmlText), 'application/xml');
 
     const getText = (tags: string[]): string => {
       for (const tag of tags) {
