@@ -737,23 +737,24 @@ class MainWindow(QMainWindow):
                         font-weight: 600;
                         font-size: 11px;
                         border-radius: 5px;
-                        border: 1px solid #38bdf8;
+                        border: 1px solid #0ea5e9;
                         padding: 0 9px;
                     }
                 """)
             else:
                 btn.setStyleSheet("""
                     QPushButton {
-                        background-color: #181818;
+                        background-color: #2a2a2a;
                         color: #aaaaaa;
                         font-weight: 500;
                         font-size: 11px;
                         border-radius: 5px;
-                        border: 1px solid #303030;
+                        border: 1px solid #2a2a2a;
                         padding: 0 9px;
                     }
                     QPushButton:hover {
-                        background-color: #262626;
+                        background-color: #333333;
+                        border-color: #333333;
                         color: #ffffff;
                     }
                 """)
@@ -926,12 +927,12 @@ class MainWindow(QMainWindow):
             QPushButton {
                 background-color: #2c2c2c;
                 color: #dddddd;
-                border: 1px solid #404040;
+                border: 1px solid #2c2c2c;
                 border-radius: 4px;
                 padding: 0 10px;
                 font-size: 11px;
             }
-            QPushButton:hover { background-color: #333333; color: #ffffff; }
+            QPushButton:hover { background-color: #333333; border-color: #333333; color: #ffffff; }
         """)
         self.btn_close.clicked.connect(self._close_mod)
         right_box.addWidget(self.btn_close)

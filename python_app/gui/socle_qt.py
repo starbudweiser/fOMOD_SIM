@@ -15,7 +15,8 @@ import os
 import tempfile
 
 from PyQt6.QtGui import QColor, QFont, QFontDatabase, QPalette
-from PyQt6.QtWidgets import QApplication, QWidget
+from PyQt6.QtCore import QEvent, QObject, Qt
+from PyQt6.QtWidgets import QApplication, QCheckBox, QHBoxLayout, QLabel, QRadioButton, QSizePolicy, QWidget
 
 TOKENS = {'version': 1,
  'colors': {'dark': {'bg': '#1e1e1e',
@@ -221,6 +222,71 @@ def status(widget: QWidget, name: str = "none") -> QWidget:
     return widget
 
 
+class WrapChoice(QWidget):
+    """Case à cocher (ou radio) dont le libellé passe à la ligne au lieu de déborder à droite.
+
+    S'emploie comme un QCheckBox : isChecked(), setChecked(), toggled, setText(), text().
+    Radios : chaque WrapChoice a son propre parent, les regrouper dans un QButtonGroup (via .box).
+    """
+
+    def __init__(self, text: str = "", radio: bool = False, parent: QWidget | None = None):
+        super().__init__(parent)
+        self.box = QRadioButton() if radio else QCheckBox()
+        self.box.setAccessibleName(text)
+        self.label = QLabel(text)
+        self.label.setWordWrap(True)
+        self.label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+        self.label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self.label.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.label.setStyleSheet("background: transparent;")
+        lay = QHBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(int(m("space-2.5")))
+        lay.addWidget(self.box, 0, Qt.AlignmentFlag.AlignTop)
+        lay.addWidget(self.label, 1)
+        self.toggled = self.box.toggled
+        self.setFocusProxy(self.box)
+
+    def mousePressEvent(self, event):  # un clic sur le libellé coche la case
+        if self.isEnabled() and event.button() == Qt.MouseButton.LeftButton:
+            self.box.click()
+
+    def isChecked(self) -> bool:
+        return self.box.isChecked()
+
+    def setChecked(self, value: bool) -> None:
+        self.box.setChecked(value)
+
+    def text(self) -> str:
+        return self.label.text()
+
+    def setText(self, text: str) -> None:
+        self.label.setText(text)
+        self.box.setAccessibleName(text)
+
+
+class _FitHeight(QObject):
+    def eventFilter(self, obj, event):
+        if event.type() in (QEvent.Type.Show, QEvent.Type.Resize, QEvent.Type.LayoutRequest):
+            lay = obj.layout()
+            if lay is not None and lay.hasHeightForWidth():
+                h = lay.totalHeightForWidth(obj.width())
+                if h != obj.minimumHeight():
+                    obj.setMinimumHeight(h)
+        return False
+
+
+def fit_height(window: QWidget) -> QWidget:
+    """Hauteur minimale d'une fenêtre ou d'un dialogue recalculée selon sa largeur.
+
+    Qt n'agrandit pas une fenêtre quand des libellés passent à la ligne (WrapChoice,
+    QLabel.setWordWrap) : sans cela, les lignes se chevauchent ou sont rognées.
+    """
+    window._socle_fit = _FitHeight(window)
+    window.installEventFilter(window._socle_fit)
+    return window
+
+
 def _icons_dir(theme: str) -> str:
     """Écrit les petites icônes SVG (coche, flèche) utilisées par la feuille QSS."""
     path = os.path.join(tempfile.gettempdir(), f"socle_qt_v{TOKENS['version']}_{theme}")
@@ -257,7 +323,8 @@ def _type_rules() -> str:
     return "\n".join([rules[-1]] + rules[:-1])
 
 
-_BASE_SELECTORS = ("QToolTip", "QScrollBar", "QScrollArea", "QMenu", "QDialog", "QMessageBox")
+_BASE_SELECTORS = ("QToolTip", "QScrollBar", "QScrollArea", "QMenu", "QDialog", "QMessageBox",
+                   "QComboBox", "QCheckBox", "QRadioButton", "QTabWidget", "QTabBar")
 
 
 def _minimal(sheet: str) -> str:
@@ -311,30 +378,30 @@ QLabel[status="info"] {{ color: {k['accent-text']}; }}
 /* Boutons — secondaire par défaut */
 QPushButton, QToolButton {{
     background-color: {k['control']}; color: {k['text-strong']};
-    border: 1px solid {k['border-strong']}; border-radius: {r}px;
+    border: 1px solid {k['control']}; border-radius: {r}px;
     min-height: {m('size-control') - 2}px; padding: 0 {m('space-3')}px;
 }}
-QPushButton:hover, QToolButton:hover {{ background-color: {k['control-hover']}; }}
-QPushButton:pressed, QToolButton:pressed {{ background-color: {k['control-pressed']}; }}
+QPushButton:hover, QToolButton:hover {{ background-color: {k['control-hover']}; border-color: {k['control-hover']}; }}
+QPushButton:pressed, QToolButton:pressed {{ background-color: {k['control-pressed']}; border-color: {k['control-pressed']}; }}
 QPushButton:focus, QToolButton:focus {{ border-color: {k['focus-ring']}; }}
-QPushButton:disabled, QToolButton:disabled {{ color: {k['text-disabled']}; background-color: {k['control']}; border-color: {k['border']}; }}
-QPushButton[variant="tertiary"] {{ background-color: {k['control-strong']}; border-color: transparent; }}
+QPushButton:disabled, QToolButton:disabled {{ color: {k['text-disabled']}; background-color: {k['control']}; border-color: {k['control']}; }}
+QPushButton[variant="tertiary"] {{ background-color: {k['control-strong']}; border-color: {k['control-strong']}; }}
 QPushButton[variant="primary"], QPushButton[variant="flow"] {{ min-height: {m('size-control-lg') - 2}px; padding: 0 {m('space-4')}px; }}
 QPushButton[variant="primary"] {{ background-color: {k['accent-fill']}; color: {k['on-accent-fill']}; border-color: {k['accent-fill']}; }}
 QPushButton[variant="primary"]:hover {{ background-color: {k['accent-fill-hover']}; border-color: {k['accent-fill-hover']}; }}
 QPushButton[variant="primary"]:pressed {{ background-color: {k['accent-fill-pressed']}; }}
 QPushButton[variant="primary"]:focus {{ border-color: {k['focus-ring']}; }}
-QPushButton[variant="primary"]:disabled {{ background-color: {k['control']}; color: {k['text-disabled']}; border-color: {k['border']}; }}
+QPushButton[variant="primary"]:disabled {{ background-color: {k['control']}; color: {k['text-disabled']}; border-color: {k['control']}; }}
 QPushButton[variant="action"] {{ min-height: {m('size-cta') - 2}px; padding: 0 {m('space-4')}px; background-color: {k['action']}; color: {k['on-action']}; border-color: {k['action']}; }}
 QPushButton[variant="action"]:hover {{ background-color: {k['action-hover']}; border-color: {k['action-hover']}; }}
 QPushButton[variant="action"]:pressed {{ background-color: {k['action-pressed']}; }}
 QPushButton[variant="action"]:focus {{ border-color: {k['focus-ring']}; }}
-QPushButton[variant="action"]:disabled {{ background-color: {k['control']}; color: {k['text-disabled']}; border-color: {k['border']}; }}
+QPushButton[variant="action"]:disabled {{ background-color: {k['control']}; color: {k['text-disabled']}; border-color: {k['control']}; }}
 QPushButton[variant="picker"] {{ background-color: {k['bg-inset']}; border: 1px dashed {k['border-strong']}; border-radius: {rlg}px; text-align: left; padding: {m('space-3')}px; }}
 QPushButton[variant="picker"]:hover {{ border-color: {k['accent']}; background-color: {k['surface-hover']}; }}
-QPushButton[variant="picker"][filled="true"] {{ border-style: solid; border-color: {k['border']}; }}
+QPushButton[variant="picker"][filled="true"] {{ border-style: solid; border-color: {k['control']}; }}
 QPushButton[variant="picker"][filled="true"]:hover {{ border-color: {k['accent']}; }}
-QPushButton[variant="picker"]:disabled {{ color: {k['text-disabled']}; border-color: {k['border']}; }}
+QPushButton[variant="picker"]:disabled {{ color: {k['text-disabled']}; border-color: {k['control']}; }}
 QPushButton[variant="picker"] QLabel {{ background: transparent; }}
 
 /* Champs */
@@ -346,9 +413,11 @@ QLineEdit, QSpinBox, QComboBox {{ min-height: {m('size-control') - 2}px; }}
 QPlainTextEdit, QTextEdit {{ padding: {m('space-2')}px; }}
 QLineEdit:focus, QPlainTextEdit:focus, QTextEdit:focus, QSpinBox:focus, QComboBox:focus {{ border-color: {k['focus-ring']}; }}
 QLineEdit:disabled, QComboBox:disabled {{ color: {k['text-disabled']}; }}
-QComboBox::drop-down {{ border: none; width: 22px; }}
-QComboBox::down-arrow {{ image: url({icons}/chevron.svg); width: 12px; height: 12px; }}
-QComboBox QAbstractItemView {{ background-color: {k['surface']}; border: 1px solid {k['border']}; selection-background-color: {k['surface-selected']}; selection-color: {k['text-strong']}; }}
+QComboBox {{ padding-right: {m('space-6') + m('space-1')}px; }}
+QComboBox::drop-down, QComboBox::drop-down:editable {{ subcontrol-origin: padding; subcontrol-position: center right; width: {m('space-6')}px; border: none; background: transparent; }}
+QComboBox::down-arrow, QComboBox::down-arrow:on {{ image: url({icons}/chevron.svg); width: 12px; height: 12px; }}
+QComboBox QAbstractItemView {{ background-color: {k['surface']}; color: {k['text']}; border: 1px solid {k['border']}; outline: none; padding: {m('space-1')}px; selection-background-color: {k['surface-selected']}; selection-color: {k['text-strong']}; }}
+QComboBox QAbstractItemView::item {{ min-height: {m('size-control') - 8}px; padding: 0 {m('space-2')}px; border-radius: {r}px; }}
 
 /* Choix */
 QCheckBox, QRadioButton {{ background: transparent; spacing: {m('space-2.5')}px; color: {k['text']}; }}
