@@ -41,7 +41,7 @@ Skyrim does **not** need to be installed.
 
 1. Unzip `fOMODSIM_macOS_arm64.zip` (or use `fOMODSIM.app`).
 2. Drag `fOMODSIM.app` into `/Applications`.
-3. First launch: the app is **ad-hoc signed** (not notarized). If macOS blocks it: **right-click → Open → Open**, or *System Settings → Privacy & Security → Open Anyway*.
+3. First launch: the app is signed with a **personal certificate** (not notarized). If macOS blocks it: **right-click → Open → Open**, or *System Settings → Privacy & Security → Open Anyway*.
 
 ### Python (macOS / Windows / Linux)
 
@@ -87,7 +87,7 @@ On the welcome screen choose your language (🇫🇷 🇬🇧 🇮🇹 🇪🇸)
 
 | Problem | Fix |
 |---|---|
-| "App is damaged / unidentified developer" | Right-click → Open (ad-hoc signature). |
+| "App is damaged / unidentified developer" | Right-click → Open (app not notarized). |
 | Cannot open a `.rar` | Install `p7zip` or `unrar`. |
 | `ModuleNotFoundError: PyQt6` | `pip install -r python_app/requirements.txt`. |
 | Archive has no FOMOD installer | The mod has no wizard: copy it directly. |
@@ -95,5 +95,5 @@ On the welcome screen choose your language (🇫🇷 🇬🇧 🇮🇹 🇪🇸)
 ## 7. Build it yourself (macOS)
 
 ```bash
-./build_app.sh     # produces ./fOMODSIM.app (ad-hoc signed, with icon)
+./build_app.sh     # produces ./fOMODSIM.app (signed with the local certificate from ../_tools, with icon)
 ```

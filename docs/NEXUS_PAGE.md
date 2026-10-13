@@ -61,7 +61,7 @@ Skyrim **n'a pas besoin** d'être installé.
 
 ## ⬇️ Installation
 
-- **macOS** : décompressez, glissez `fOMODSIM.app` dans `/Applications`. Application signée ad hoc : au premier lancement, **clic droit → Ouvrir**.
+- **macOS** : décompressez, glissez `fOMODSIM.app` dans `/Applications`. Application signée avec un certificat personnel, non notariée : au premier lancement, **clic droit → Ouvrir**.
 - **Python** : `pip install PyQt6 py7zr` puis `python3 -m python_app.main`.
 
 ## ⚠️ À savoir
@@ -141,7 +141,7 @@ Skyrim does **not** need to be installed.
 
 ## ⬇️ Installation
 
-- **macOS**: unzip, drag `fOMODSIM.app` into `/Applications`. Ad-hoc signed app: on first launch, **right-click → Open**.
+- **macOS**: unzip, drag `fOMODSIM.app` into `/Applications`. App signed with a personal certificate, not notarized: on first launch, **right-click → Open**.
 - **Python**: `pip install PyQt6 py7zr` then `python3 -m python_app.main`.
 
 ## ⚠️ Good to know

@@ -41,7 +41,7 @@ Skyrim n'a **pas** besoin d'être installé.
 
 1. Décompressez `fOMODSIM_macOS_arm64.zip` (ou utilisez `fOMODSIM.app`).
 2. Glissez `fOMODSIM.app` dans `/Applications`.
-3. Premier lancement : l'application est signée **ad hoc** (non notariée). Si macOS la bloque : **clic droit → Ouvrir → Ouvrir**, ou *Réglages Système → Confidentialité et sécurité → Ouvrir quand même*.
+3. Premier lancement : l'application est signée avec un **certificat personnel** (non notariée). Si macOS la bloque : **clic droit → Ouvrir → Ouvrir**, ou *Réglages Système → Confidentialité et sécurité → Ouvrir quand même*.
 
 ### Python (macOS / Windows / Linux)
 
@@ -87,7 +87,7 @@ Sur l'écran d'accueil, choisissez la langue (🇫🇷 🇬🇧 🇮🇹 🇪�
 
 | Problème | Solution |
 |---|---|
-| « L'application est endommagée / développeur non identifié » | Clic droit → Ouvrir (signature ad hoc). |
+| « L'application est endommagée / développeur non identifié » | Clic droit → Ouvrir (application non notariée). |
 | Impossible d'ouvrir un `.rar` | Installer `p7zip` ou `unrar`. |
 | `ModuleNotFoundError: PyQt6` | `pip install -r python_app/requirements.txt`. |
 | L'archive n'a pas d'installeur FOMOD | Le mod s'installe sans assistant : copiez-le directement. |
@@ -95,5 +95,5 @@ Sur l'écran d'accueil, choisissez la langue (🇫🇷 🇬🇧 🇮🇹 🇪�
 ## 7. Compiler soi-même (macOS)
 
 ```bash
-./build_app.sh     # génère ./fOMODSIM.app (signé ad hoc, avec icône)
+./build_app.sh     # génère ./fOMODSIM.app (signée avec le certificat local de ../_tools, avec icône)
 ```
