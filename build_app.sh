@@ -61,9 +61,15 @@ fi
 
 # 4. Signature stable (certificat local, _tools) + vérification
 echo "Signature de l'application macOS..."
-"$(cd "$ROOT/.." && pwd)/_tools/sign_app.sh" "$BUILT_APP"
-
-# 5. Livraison à la racine du projet
+# Signature stable avec _tools/sign_app.sh (certificat local) ; sans lui (compilation depuis
+# le dépôt GitHub seul), signature ad hoc pour que l'appli se lance quand même.
+SIGN_APP="$(cd "$ROOT/.." && pwd)/_tools/sign_app.sh"
+if [ -x "$SIGN_APP" ]; then
+    "$SIGN_APP" "$BUILT_APP"
+else
+    echo "_tools/sign_app.sh absent : signature ad hoc."
+    codesign --force --deep --sign - "$BUILT_APP"
+fi
 rm -rf "$TARGET"
 mv "$BUILT_APP" "$TARGET"
 
