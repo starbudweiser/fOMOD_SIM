@@ -61,14 +61,13 @@ Skyrim **n'a pas besoin** d'être installé.
 
 ## ⬇️ Installation
 
-- **macOS** : décompressez, glissez `fOMODSIM.app` dans `/Applications`. Application signée avec un certificat personnel, non notariée : au premier lancement, **clic droit → Ouvrir**.
+- **macOS** : décompressez, glissez `fOMODSIM.app` dans `/Applications`.
 - **Python** : `pip install PyQt6 py7zr` puis `python3 -m python_app.main`.
 
 ## ⚠️ À savoir
 
 - L'outil **ne modifie pas** votre installation Skyrim : il produit uniquement un dossier de staging.
 - Version Linux : portage documenté, **non testé**.
-- Application non notariée Apple.
 
 ## 🛠️ Compatibilité & Langues
 
@@ -141,14 +140,13 @@ Skyrim does **not** need to be installed.
 
 ## ⬇️ Installation
 
-- **macOS**: unzip, drag `fOMODSIM.app` into `/Applications`. App signed with a personal certificate, not notarized: on first launch, **right-click → Open**.
+- **macOS**: unzip, drag `fOMODSIM.app` into `/Applications`.
 - **Python**: `pip install PyQt6 py7zr` then `python3 -m python_app.main`.
 
 ## ⚠️ Good to know
 
 - The tool **does not modify** your Skyrim install: it only produces a staging folder.
 - Linux edition: port documented, **untested**.
-- App is not Apple-notarized.
 
 ## 🛠️ Compatibility & Languages
 
