@@ -18,6 +18,7 @@ if current_dir not in sys.path:
 
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import Qt
+import update_check
 
 try:
     from python_app.gui.main_window import MainWindow
@@ -84,6 +85,7 @@ def main():
             logger.warning(f"Fichier passé en argument inexistant : {target_path}")
 
     window.show()
+    update_check.start_qt(window, "fOMOD_SIM", lang=lambda: window.i18n.current_language)  # nouvelle version ? (au plus une fois par jour)
     sys.exit(app.exec())
 
 
