@@ -143,4 +143,8 @@ STRINGS = {
             "writeSuccess": "¡Archivos escritos con éxito en su carpeta local!",
         },
     },
+    "splash": {
+        "subtitle": "SIMULADOR FOMOD",
+        "footer": "Para Skyrim SE / AE",
+    },
 }

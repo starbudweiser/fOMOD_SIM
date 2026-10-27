@@ -5,7 +5,7 @@ Supporte Français ('fr'), Anglais ('en'), Italien ('it'), Espagnol ('es').
 """
 
 from typing import Dict, Any, List, Tuple
-from PyQt6.QtCore import QSettings
+from PyQt6.QtCore import QLocale, QSettings
 
 try:
     from python_app.locales.fr import STRINGS as FR_STRINGS
@@ -36,6 +36,16 @@ SETTINGS_KEY = "language"
 DEFAULT_LANGUAGE = "fr"
 
 
+def system_language() -> str:
+    """Langue préférée du système si elle fait partie des 4, sinon anglais."""
+    for name in QLocale.system().uiLanguages():
+        code = name[:2].lower()
+        if code in TRANSLATIONS:
+            return code
+        break  # seule la langue préférée compte
+    return "en"
+
+
 class I18nManager:
     """Gestionnaire singleton de traduction."""
 
@@ -49,9 +59,9 @@ class I18nManager:
 
     def _init_settings(self):
         self.settings = QSettings("SkyrimTools", "FOMODSimulator")
-        saved_lang = self.settings.value(SETTINGS_KEY, DEFAULT_LANGUAGE)
+        saved_lang = self.settings.value(SETTINGS_KEY, None)
         if saved_lang not in TRANSLATIONS:
-            saved_lang = DEFAULT_LANGUAGE
+            saved_lang = system_language()
         self._current_lang = saved_lang
 
     @property

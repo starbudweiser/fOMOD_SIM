@@ -2,6 +2,18 @@
 
 Notes de version / release notes (EN + FR). Translations in IT and ES: see the Nexus Mods page.
 
+## Unreleased / À paraître
+
+**English**
+
+- Animated splash screen at launch (4 s, the main window opens after 2 s), shared by all Skyrim Tools apps; static when macOS "Reduce motion" is on.
+- The interface language now follows the system's preferred language on first launch (English if it is not French, English, Spanish or Italian).
+
+**Français**
+
+- Écran de lancement animé (4 s, la fenêtre principale s'ouvre au bout de 2 s), commun aux applis Skyrim Tools ; fixe quand « Réduire les animations » est activé dans macOS.
+- La langue de l'interface suit désormais la langue préférée du système au premier lancement (anglais si ce n'est ni le français, ni l'anglais, ni l'espagnol, ni l'italien).
+
 ## 1.0.1
 
 **English**

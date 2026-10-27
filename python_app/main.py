@@ -24,10 +24,12 @@ try:
     from python_app.gui.main_window import MainWindow
     from python_app.gui.theme import DARK_THEME_QSS
     from python_app.gui import socle_qt
+    from python_app.gui.splash import SplashScreen
 except ImportError:
     from gui.main_window import MainWindow
     from gui.theme import DARK_THEME_QSS
     from gui import socle_qt
+    from gui.splash import SplashScreen
 
 
 def setup_logging():
@@ -84,7 +86,14 @@ def main():
         else:
             logger.warning(f"Fichier passé en argument inexistant : {target_path}")
 
-    window.show()
+    # Splash animé (règle Socle) : fenêtre principale à t = 2 s, sortie du splash à t = 4 s
+    splash = SplashScreen(
+        "fOMODSIM",
+        window.i18n.get("splash", "subtitle"),
+        f"{window.i18n.get('splash', 'footer')} · v{app.applicationVersion()}",
+    )
+    splash.start()
+    splash.open_main_window(window)
     update_check.start_qt(window, "fOMOD_SIM", lang=lambda: window.i18n.current_language)  # nouvelle version ? (au plus une fois par jour)
     sys.exit(app.exec())
 
