@@ -60,7 +60,7 @@ EASE_DROP = _bezier(0.34, 1.3, 0.5, 1)
 EASE_LETTER = _bezier(0.2, 1.2, 0.4, 1)
 EASE_RULE = _bezier(0.65, 0, 0.35, 1)
 EASE_OUT = _bezier(0, 0, 0.58, 1)
-EASE_LEAVE = _bezier(0.6, -0.28, 0.735, 0.045)
+EASE_LEAVE = _bezier(0.6, -0.14, 0.735, 0.045)  # rebond limité : carte ≤ 104 % (103,95 %)
 
 
 def _progress(t: float, delay: float, duration: float, curve: QEasingCurve) -> float:
@@ -117,14 +117,24 @@ class SplashScreen(QWidget):
 
     def start(self):
         screen = QGuiApplication.primaryScreen()
+        target = None
         if screen is not None:
-            geo = screen.availableGeometry()
-            self.move(geo.center().x() - SPLASH_WIDTH // 2, geo.center().y() - SPLASH_HEIGHT // 2)
+            geo = screen.geometry()  # centre de l'écran complet, pas de la zone disponible
+            target = (geo.x() + (geo.width() - SPLASH_WIDTH) // 2, geo.y() + (geo.height() - SPLASH_HEIGHT) // 2)
+            self.move(*target)
         self.show()
+        if target is not None:
+            self.move(*target)  # macOS remonte la fenêtre de 20 px à l'affichage : on la recentre
         self._clock.start()
         if not self._reduced:
             self._frame_timer.start()
-        logger.info("Splash : visible (t = 0 ms)")
+        if screen is not None:
+            geo = screen.geometry()
+            c = self.frameGeometry().center()
+            logger.info("Splash : visible (t = 0 ms), écart au centre de l'écran %d/%d px",
+                        c.x() - geo.center().x(), c.y() - geo.center().y())
+        else:
+            logger.info("Splash : visible (t = 0 ms)")
 
     def open_main_window(self, window):
         """Ouvre la fenêtre principale à t = 2 s (ou tout de suite si l'appli est prête plus tard),
@@ -221,8 +231,7 @@ class SplashScreen(QWidget):
         p.fillPath(path, CARD_BG)
 
         p.save()
-        p.setClipPath(path)
-        p.translate(card.topLeft())
+        p.translate(card.topLeft())  # pas de découpe : rien n'est rogné
         self._paint_logo(p, t)
         self._paint_text(p, t)
         p.restore()
