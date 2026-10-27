@@ -66,6 +66,7 @@ def main():
 
     app = QApplication(sys.argv)
     socle_qt.apply(app, full=False)  # design system Socle (palette + règles de base)
+    socle_qt.brand(app, ["fOMODSIM", "fOMOD_SIM"], "#1677dc")  # « f » dans le bleu du logo
     if sys.platform == "darwin":
         from PyQt6.QtGui import QFont
         app.setFont(QFont(".AppleSystemUIFont", 13))
