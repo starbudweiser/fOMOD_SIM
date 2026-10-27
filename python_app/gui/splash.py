@@ -147,9 +147,9 @@ class SplashScreen(QWidget):
             window.raise_()
             window.activateWindow()
             logger.info("Splash : fenêtre principale affichée à t = %d ms", self.elapsed())
-            QTimer.singleShot(max(200, MIN_SHOWN_MS - self.elapsed()), self.leave)
+            QTimer.singleShot(max(200, MIN_SHOWN_MS - self.elapsed()), Qt.TimerType.PreciseTimer, self.leave)
 
-        QTimer.singleShot(max(0, MAIN_WINDOW_AT_MS - self.elapsed()), show_window)
+        QTimer.singleShot(max(0, MAIN_WINDOW_AT_MS - self.elapsed()), Qt.TimerType.PreciseTimer, show_window)
 
     def leave(self):
         if self._closed or self._leave_at is not None:
@@ -159,7 +159,7 @@ class SplashScreen(QWidget):
         if self._reduced:
             self._close_now()
         else:
-            QTimer.singleShot(LEAVE_MS + 50, self._close_now)
+            QTimer.singleShot(LEAVE_MS + 50, Qt.TimerType.PreciseTimer, self._close_now)
 
     def _close_now(self):
         if self._closed:
