@@ -36,7 +36,7 @@ class TestSplash(unittest.TestCase):
 
     def test_symmetric_margins(self):
         # Marges intérieures égales (24 px mini), même avec un nom ou un sous-titre trop long
-        for title, sub in [("fOMODSIM", "SIMULATORE FOMOD"), ("fOMODSIMULATORULTIMATE", "SIMULATORE DI INSTALLATORI FOMOD")]:
+        for title, sub in [("fOMODSIM", "SIMULATORE FOMOD"), ("CAREERDeSK", "SIMULATORE DI INSTALLATORI FOMOD")]:
             s = SplashScreen(title, sub, "x", reduced_motion=True)
             left = s._logo_left
             right = 476 - s._text_left - s._text_width
