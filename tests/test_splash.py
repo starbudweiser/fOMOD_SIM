@@ -34,6 +34,15 @@ class TestSplash(unittest.TestCase):
             splash.grab()
         splash.deleteLater()
 
+    def test_symmetric_margins(self):
+        # Marges intérieures égales (24 px mini), même avec un nom ou un sous-titre trop long
+        for title, sub in [("fOMODSIM", "SIMULATORE FOMOD"), ("fOMODSIMULATORULTIMATE", "SIMULATORE DI INSTALLATORI FOMOD")]:
+            s = SplashScreen(title, sub, "x", reduced_motion=True)
+            left = s._logo_left
+            right = 476 - s._text_left - s._text_width
+            self.assertAlmostEqual(left, right, delta=0.5)
+            self.assertGreaterEqual(left, 24 - 0.5)
+
     def test_timeline(self):
         for reduced in (False, True):
             splash = SplashScreen("fOMODSIM", "X", "Y", reduced_motion=reduced)

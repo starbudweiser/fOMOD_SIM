@@ -32,6 +32,9 @@ logger = logging.getLogger("fomod_simulator.splash")
 SPLASH_WIDTH = 500  # size-splash-width (Socle)
 SPLASH_HEIGHT = 190  # size-splash-height (Socle)
 MARGIN = 12
+PADDING = 24  # space-6 (Socle) : même marge intérieure à gauche et à droite
+LOGO = 108
+GAP = 26
 MAIN_WINDOW_AT_MS = 2000
 MIN_SHOWN_MS = 4000
 LEAVE_MS = 600
@@ -168,16 +171,16 @@ class SplashScreen(QWidget):
 
     # ---- Mise en page ----
     def _prepare_fonts(self):
-        self._text_left = 34 + 108 + 26
-        self._text_width = 476 - 30 - self._text_left
+        # Zone utile : 476 − 2 × 24 px ; le texte se réduit pour y tenir sur une ligne
+        max_text = 476 - 2 * PADDING - LOGO - GAP
 
         self._title_font = QFont(".AppleSystemUIFont")
         self._title_font.setWeight(QFont.Weight.ExtraBold)
         self._title_font.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 0.5)
         size = 50.0
-        while size > 24:
+        while size > 12:
             self._title_font.setPixelSize(int(size))
-            if QFontMetricsF(self._title_font).horizontalAdvance(self._title) <= self._text_width:
+            if QFontMetricsF(self._title_font).horizontalAdvance(self._title) <= max_text:
                 break
             size -= 1
         self._title_size = size
@@ -185,13 +188,23 @@ class SplashScreen(QWidget):
         self._sub_font = QFont(".AppleSystemUIFont")
         self._sub_font.setWeight(QFont.Weight.DemiBold)
         sub = 17.0
-        while sub > 10:
+        while sub > 6:
             self._sub_font.setPixelSize(int(sub))
-            self._sub_font.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 5)
-            if QFontMetricsF(self._sub_font).horizontalAdvance(self._subtitle) <= self._text_width:
+            self._sub_spacing = 5 * sub / 17  # l'espacement se réduit avec la taille
+            self._sub_font.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, self._sub_spacing)
+            if QFontMetricsF(self._sub_font).horizontalAdvance(self._subtitle) <= max_text:
                 break
             sub -= 1
         self._sub_size = sub
+
+        # Bloc logo + texte centré dans la carte
+        sub_font = QFont(self._sub_font)
+        self._text_width = max(
+            QFontMetricsF(self._title_font).horizontalAdvance(self._title),
+            QFontMetricsF(sub_font).horizontalAdvance(self._subtitle),
+        )
+        self._logo_left = (476 - (LOGO + GAP + self._text_width)) / 2
+        self._text_left = self._logo_left + LOGO + GAP
 
         self._footer_font = QFont(".AppleSystemUIFont")
         self._footer_font.setPixelSize(10)
@@ -269,7 +282,7 @@ class SplashScreen(QWidget):
         k = _progress(t, 300, 1400, EASE_OUT)
         if k <= 0:
             return
-        c = QPointF(80, 83)
+        c = QPointF(self._logo_left + LOGO / 2, 83)
         g = QRadialGradient(c, 120)
         g.setColorAt(0, QColor(40, 140, 255, int(56 * k)))
         g.setColorAt(0.65, QColor(40, 140, 255, 0))
@@ -293,9 +306,9 @@ class SplashScreen(QWidget):
         p.restore()
 
     def _paint_logo(self, p: QPainter, t: float, idle: bool):
-        size = 108.0
+        size = float(LOGO)
         p.save()
-        p.translate(34 + size / 2, 83)
+        p.translate(self._logo_left + size / 2, 83)
 
         # Carré bleu : arrivée en tourbillon, puis battement de cœur
         k = _progress(t, 0, 1300, EASE_LOGO)
@@ -397,7 +410,7 @@ class SplashScreen(QWidget):
         if k > 0:
             p.save()
             font = QFont(self._sub_font)
-            font.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 14 - 9 * k)
+            font.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, self._sub_spacing * (14 - 9 * k) / 5)
             p.setFont(font)
             p.setOpacity(p.opacity() * k)
             p.setPen(QColor("#d8d8d8"))
@@ -412,5 +425,5 @@ class SplashScreen(QWidget):
             p.setOpacity(p.opacity() * k)
             p.setPen(QColor("#aaaaaa"))
             w = QFontMetricsF(self._footer_font).horizontalAdvance(self._footer)
-            p.drawText(QPointF(476 - 18 - w, 166 - 10 - 2), self._footer)
+            p.drawText(QPointF(476 - PADDING - w, 166 - 10 - 2), self._footer)
             p.restore()
