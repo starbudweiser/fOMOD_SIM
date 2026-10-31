@@ -33,6 +33,12 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
+function systemLanguage(): Language {
+  const code = (navigator.languages ?? [navigator.language]).map((l) => l.slice(0, 2).toLowerCase())
+    .find((l) => ['fr', 'en', 'it', 'es'].includes(l));
+  return (code ?? 'en') as Language;
+}
+
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>(() => {
     try {
@@ -43,8 +49,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     } catch {
       // Fallback
     }
-    // Default language is French as requested: "Nous partons avec le français (par défaut pour l'instant)"
-    return 'fr';
+    return systemLanguage();
   });
 
   const setLanguage = (lang: Language) => {

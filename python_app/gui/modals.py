@@ -46,6 +46,12 @@ def format_bytes(sz: int) -> str:
     return f"{sz / (1024 * 1024):.2f} Mo"
 
 
+def _t(key: str, **kwargs) -> str:
+    """Texte de la section « ui » des traductions."""
+    text = get_i18n().get("ui", key)
+    return text.format(**kwargs) if kwargs else text
+
+
 class OpenModModal(QDialog):
     """Boîte de dialogue modale '📦 Ouvrir un FOMOD' harmonisée."""
 
@@ -130,16 +136,16 @@ class OpenModModal(QDialog):
         btn_archive_layout.setSpacing(4)
 
         arch_title_row = QHBoxLayout()
-        arch_title = QLabel("📦 Parcourir une archive (.ZIP, .RAR, .7Z)")
+        arch_title = QLabel(_t("browseArchive"))
         arch_title.setStyleSheet("font-size: 13px; font-weight: bold; color: #fbbf24; border: none; background: transparent;")
-        arch_badge = QLabel("Support complet")
+        arch_badge = QLabel(_t("fullSupport"))
         arch_badge.setStyleSheet("font-size: 10px; color: #4ade80; background-color: rgba(74, 222, 128, 0.15); border: none; border-radius: 4px; padding: 2px 6px;")
         arch_title_row.addWidget(arch_title)
         arch_title_row.addStretch()
         arch_title_row.addWidget(arch_badge)
         btn_archive_layout.addLayout(arch_title_row)
 
-        arch_desc = QLabel("Sélectionnez directement votre archive téléchargée (.zip, .rar ou .7z). Extraction et simulation instantanées.")
+        arch_desc = QLabel(_t("archiveDesc"))
         arch_desc.setWordWrap(True)
         arch_desc.setStyleSheet("font-size: 11px; color: #aaaaaa; border: none; background: transparent;")
         btn_archive_layout.addWidget(arch_desc)
@@ -167,16 +173,16 @@ class OpenModModal(QDialog):
         btn_folder_layout.setSpacing(4)
 
         folder_title_row = QHBoxLayout()
-        folder_title = QLabel("📂 Parcourir un dossier décompressé")
+        folder_title = QLabel(_t("browseFolder"))
         folder_title.setStyleSheet("font-size: 13px; font-weight: bold; color: #38bdf8; border: none; background: transparent;")
-        folder_badge = QLabel("Dossier local")
+        folder_badge = QLabel(_t("localFolder"))
         folder_badge.setStyleSheet("font-size: 10px; color: #aaaaaa; padding: 2px 4px; border: none; background: transparent;")
         folder_title_row.addWidget(folder_title)
         folder_title_row.addStretch()
         folder_title_row.addWidget(folder_badge)
         btn_folder_layout.addLayout(folder_title_row)
 
-        folder_desc = QLabel("Si vous avez déjà extrait votre mod dans un répertoire local sur votre disque, sélectionnez directement ce dossier.")
+        folder_desc = QLabel(_t("folderDesc"))
         folder_desc.setWordWrap(True)
         folder_desc.setStyleSheet("font-size: 11px; color: #aaaaaa; border: none; background: transparent;")
         btn_folder_layout.addWidget(folder_desc)
@@ -186,7 +192,7 @@ class OpenModModal(QDialog):
 
         # Section 2 : Mods démo intégrés
         layout.addSpacing(4)
-        sec2_lbl = QLabel("MODS DE DÉMONSTRATION RÉALISTES INTÉGRÉS")
+        sec2_lbl = QLabel(_t("demoMods"))
         sec2_lbl.setStyleSheet("font-size: 11px; font-weight: bold; color: #aaaaaa; border: none; background: transparent;")
         layout.addWidget(sec2_lbl)
 
@@ -209,7 +215,7 @@ class OpenModModal(QDialog):
         cbbe_layout.setContentsMargins(4, 2, 4, 2)
         cbbe_title = QLabel("CBBE - Caliente's Beautiful Bodies Enhancer SE")
         cbbe_title.setStyleSheet("font-size: 12px; font-weight: 600; color: #ffffff; border: none; background: transparent;")
-        cbbe_btn_tag = QLabel("Charger →")
+        cbbe_btn_tag = QLabel(_t("load"))
         cbbe_btn_tag.setStyleSheet("font-size: 11px; color: #4ade80; font-weight: bold; border: none; background: transparent;")
         cbbe_layout.addWidget(cbbe_title)
         cbbe_layout.addStretch()
@@ -236,7 +242,7 @@ class OpenModModal(QDialog):
         smim_layout.setContentsMargins(4, 2, 4, 2)
         smim_title = QLabel("SMIM - Static Mesh Improvement Mod")
         smim_title.setStyleSheet("font-size: 12px; font-weight: 600; color: #ffffff; border: none; background: transparent;")
-        smim_btn_tag = QLabel("Charger →")
+        smim_btn_tag = QLabel(_t("load"))
         smim_btn_tag.setStyleSheet("font-size: 11px; color: #38bdf8; font-weight: bold; border: none; background: transparent;")
         smim_layout.addWidget(smim_title)
         smim_layout.addStretch()
@@ -258,7 +264,7 @@ class DataDirModal(QDialog):
         parent=None,
     ):
         super().__init__(parent)
-        self.setWindowTitle("Dossier Data de Skyrim")
+        self.setWindowTitle(_t("dataTitle"))
         self.setMinimumSize(540, 420)
         self.resize(580, 440)
         self.setStyleSheet("""
@@ -278,14 +284,11 @@ class DataDirModal(QDialog):
         layout.setContentsMargins(22, 18, 22, 18)
         layout.setSpacing(12)
 
-        title_lbl = QLabel("📂  Dossier Data de Skyrim (Détection automatique)")
+        title_lbl = QLabel(_t("dataHeading"))
         title_lbl.setStyleSheet("font-size: 15px; font-weight: bold; color: #ffffff; border: none; background: transparent;")
         layout.addWidget(title_lbl)
 
-        info_lbl = QLabel(
-            "fOMODSIM peut inspecter votre dossier Skyrim Special Edition/Data "
-            "pour pré-sélectionner automatiquement les options requises ou compatibles."
-        )
+        info_lbl = QLabel(_t("dataDesc"))
         info_lbl.setWordWrap(True)
         info_lbl.setStyleSheet("font-size: 12px; color: #aaaaaa; line-height: 1.4; border: none; background: transparent;")
         layout.addWidget(info_lbl)
@@ -295,18 +298,18 @@ class DataDirModal(QDialog):
         path_box.setStyleSheet("background-color: #181818; border: none; border-radius: 6px; padding: 10px;")
         path_layout = QVBoxLayout(path_box)
         path_layout.setContentsMargins(4, 4, 4, 4)
-        path_hdr = QLabel("Répertoire actuellement lié :")
+        path_hdr = QLabel(_t("linkedFolder"))
         path_hdr.setStyleSheet("font-size: 10px; font-weight: bold; color: #8f8f8f; border: none; background: transparent;")
         path_layout.addWidget(path_hdr)
 
-        self.path_val_lbl = QLabel(self.data_path or "(Aucun dossier sélectionné)")
+        self.path_val_lbl = QLabel(self.data_path or _t("noFolder"))
         self.path_val_lbl.setStyleSheet("font-size: 12px; font-family: 'Menlo', monospace; color: #38bdf8; border: none; background: transparent;")
         path_layout.addWidget(self.path_val_lbl)
         layout.addWidget(path_box)
 
         # Boutons d'action
         btn_row = QHBoxLayout()
-        pick_btn = QPushButton("📁 Parcourir le disque...")
+        pick_btn = QPushButton(_t("browseDisk"))
         pick_btn.setStyleSheet("""
             QPushButton {
                 background-color: #262626;
@@ -323,7 +326,7 @@ class DataDirModal(QDialog):
         pick_btn.clicked.connect(self._pick_folder)
         btn_row.addWidget(pick_btn)
 
-        sim_btn = QPushButton("⚡ Simuler plugins Skyrim (CBPC, SkyUI, skee64)")
+        sim_btn = QPushButton(_t("simulatePlugins"))
         sim_btn.setStyleSheet("""
             QPushButton {
                 background-color: #0369a1;
@@ -343,7 +346,7 @@ class DataDirModal(QDialog):
         layout.addLayout(btn_row)
 
         # Fichiers détectés
-        self.detected_lbl = QLabel(f"Plugins et DLLs détectés ({len(self.plugins)}) :")
+        self.detected_lbl = QLabel(_t("detected", n=len(self.plugins)))
         self.detected_lbl.setStyleSheet("font-size: 11px; font-weight: bold; color: #aaaaaa; margin-top: 4px; border: none; background: transparent;")
         layout.addWidget(self.detected_lbl)
 
@@ -354,7 +357,7 @@ class DataDirModal(QDialog):
         layout.addWidget(self.plugins_text)
 
         # Bouton fermer
-        close_btn = QPushButton("Valider & Fermer")
+        close_btn = QPushButton(_t("validateClose"))
         close_btn.setStyleSheet("""
             QPushButton {
                 background-color: #0ea5e9;
@@ -373,7 +376,7 @@ class DataDirModal(QDialog):
         layout.addWidget(close_btn, alignment=Qt.AlignmentFlag.AlignRight)
 
     def _pick_folder(self):
-        folder = QFileDialog.getExistingDirectory(self, "Sélectionner le dossier Skyrim Data")
+        folder = QFileDialog.getExistingDirectory(self, _t("pickDataFolder"))
         if folder:
             self.data_path = folder
             self.path_val_lbl.setText(folder)
@@ -397,11 +400,11 @@ class DataDirModal(QDialog):
 
     def _update_plugins_display(self):
         display_plugins = [p for p in self.plugins if p.endswith((".esp", ".esm", ".esl", ".dll", ".bsa", ".ba2"))]
-        self.detected_lbl.setText(f"Plugins et DLLs détectés ({len(display_plugins)}) :")
+        self.detected_lbl.setText(_t("detected", n=len(display_plugins)))
         if display_plugins:
             self.plugins_text.setText("\n".join(sorted(display_plugins)))
         else:
-            self.plugins_text.setText("(Aucun plugin détecté)")
+            self.plugins_text.setText(_t("noPlugin"))
 
     def _apply_and_close(self):
         if self.on_apply:
@@ -415,13 +418,13 @@ class StagingResultModal(QDialog):
     def __init__(
         self,
         result: StagingResult,
-        staging_dir_path: str="Bureau (Desktop)",
+        staging_dir_path: str="",
         parent=None,
         archive_index=None,
     ):
         super().__init__(parent)
         self.archive_index = archive_index
-        self.setWindowTitle("Staging généré avec succès")
+        self.setWindowTitle(_t("stagingDone"))
         self.setMinimumSize(780, 560)
         self.resize(860, 620)
         self.setStyleSheet("""
@@ -443,7 +446,7 @@ class StagingResultModal(QDialog):
         top_row = QHBoxLayout()
         icon_lbl = QLabel("✓")
         icon_lbl.setStyleSheet("font-size: 20px; font-weight: bold; color: #0ea5e9; border: none; background: transparent;")
-        title_lbl = QLabel("Staging généré avec succès !")
+        title_lbl = QLabel(_t("stagingDoneBang"))
         title_lbl.setStyleSheet("font-size: 16px; font-weight: bold; color: #ffffff; border: none; background: transparent;")
         top_row.addWidget(icon_lbl)
         top_row.addWidget(title_lbl)
@@ -469,9 +472,7 @@ class StagingResultModal(QDialog):
         layout.addLayout(top_row)
 
         sub_info = QLabel(
-            f"<b>{result.copied_count}</b> fichiers préparés &bull; "
-            f"Taille totale : <b>{format_bytes(result.total_size)}</b> &bull; "
-            f"Destination : <span style='color:#38bdf8;'>{staging_dir_path}</span>"
+            _t("stagingSummary", count=result.copied_count, size=format_bytes(result.total_size), dest=staging_dir_path)
         )
         sub_info.setStyleSheet("font-size: 12px; color: #aaaaaa; border: none; background: transparent;")
         layout.addWidget(sub_info)
@@ -507,7 +508,7 @@ class StagingResultModal(QDialog):
         tab_files_layout.setContentsMargins(8, 8, 8, 8)
 
         tree = QTreeWidget()
-        tree.setHeaderLabels(["Destination dans Data", "Taille", "Source Option"])
+        tree.setHeaderLabels([_t("colDest"), _t("colSize"), _t("colSource")])
         tree.setStyleSheet("""
             QTreeWidget {
                 background-color: #181818;
@@ -563,7 +564,7 @@ class StagingResultModal(QDialog):
                 tree.addTopLevelItem(file_leaf)
 
         tab_files_layout.addWidget(tree)
-        tabs.addTab(tab_files, "Fichiers installés")
+        tabs.addTab(tab_files, _t("filesTab"))
 
         # Tab 2 : Journal
         tab_log = QWidget()
@@ -572,15 +573,15 @@ class StagingResultModal(QDialog):
         log_edit = QTextEdit()
         log_edit.setReadOnly(True)
         log_edit.setStyleSheet("background-color: #181818; border: none; color: #aaaaaa; font-family: 'Menlo', monospace; font-size: 11px;")
-        log_edit.setText("\n".join(result.log) if result.log else "Aucun avertissement. Installation propre.")
+        log_edit.setText("\n".join(result.log) if result.log else _t("cleanInstall"))
         tab_log_layout.addWidget(log_edit)
-        tabs.addTab(tab_log, "Journal de staging")
+        tabs.addTab(tab_log, _t("logTab"))
 
         layout.addWidget(tabs)
 
         # Boutons d'action en bas
         btn_bar = QHBoxLayout()
-        export_zip_btn = QPushButton("📦 Exporter en archive ZIP")
+        export_zip_btn = QPushButton(_t("exportZip"))
         export_zip_btn.setStyleSheet("""
             QPushButton {
                 background-color: #262626;
@@ -623,9 +624,9 @@ class StagingResultModal(QDialog):
     def _export_zip(self):
         path, _ = QFileDialog.getSaveFileName(
             self,
-            "Enregistrer le mod prêt pour MO2 / Vortex",
+            _t("saveModTitle"),
             "Staging_Skyrim_Mod.zip",
-            "Archive ZIP (*.zip)",
+            _t("zipFilter"),
         )
         if path:
             try:
@@ -638,7 +639,7 @@ class StagingResultModal(QDialog):
                     )
             except Exception as e:
                 logger.error("Erreur lors de l'export ZIP: %s", e)
-                QMessageBox.critical(self, "Export ZIP", f"Erreur lors de l'export ZIP :\n{e}")
+                QMessageBox.critical(self, "Export ZIP", _t("zipError", e=e))
 
 
 class ImagePreviewModal(QDialog):
@@ -646,7 +647,7 @@ class ImagePreviewModal(QDialog):
 
     def __init__(self, pixmap: QPixmap, title: str="Aperçu FOMOD", parent=None):
         super().__init__(parent)
-        self.setWindowTitle(f"Aperçu taille réelle — {title}")
+        self.setWindowTitle(_t("previewTitle", title=title))
 
         screen = QApplication.primaryScreen()
         screen_geom = screen.availableGeometry() if screen else None
@@ -707,7 +708,7 @@ class ImagePreviewModal(QDialog):
         layout.addWidget(scroll, 1)
 
         bottom_bar = QHBoxLayout()
-        res_info = QLabel(f"Dimensions : {pixmap.width()} × {pixmap.height()} px (taille réelle)")
+        res_info = QLabel(_t("dimensions", w=pixmap.width(), h=pixmap.height()))
         res_info.setStyleSheet("color: #aaaaaa; font-size: 11px; background: transparent; border: none;")
         bottom_bar.addWidget(res_info)
 

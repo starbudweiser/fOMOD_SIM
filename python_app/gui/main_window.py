@@ -65,6 +65,12 @@ except (ImportError, ValueError):
 logger = logging.getLogger(__name__)
 
 
+def _t(key: str, **kwargs) -> str:
+    """Texte de la section « ui » des traductions."""
+    text = get_i18n().get("ui", key)
+    return text.format(**kwargs) if kwargs else text
+
+
 class FitImageLabel(QLabel):
     """Image d'aperçu ajustée à la place disponible (largeur de la colonne d'abord), centrée,
     proportions conservées ; recalculée à chaque redimensionnement."""
@@ -171,12 +177,12 @@ class DragOverlayWidget(QWidget):
         icon_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.addWidget(icon_lbl)
 
-        title_lbl = QLabel("Déposez l'archive (ZIP, RAR, 7Z) du mod FOMOD ici")
+        title_lbl = QLabel(_t("dropTitle"))
         title_lbl.setStyleSheet("font-size: 16px; font-weight: bold; color: #ffffff; border: none; background: transparent;")
         title_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.addWidget(title_lbl)
 
-        sub_lbl = QLabel("Extraction et analyse instantanées")
+        sub_lbl = QLabel(_t("dropSub"))
         sub_lbl.setStyleSheet("font-size: 12px; font-weight: 500; color: #0ea5e9; border: none; background: transparent;")
         sub_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.addWidget(sub_lbl)
@@ -229,7 +235,7 @@ class LoadingOverlayWidget(QWidget):
         self.spinner = CircularSpinnerWidget(48)
         card_layout.addWidget(self.spinner, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        title_lbl = QLabel("Chargement du mod FOMOD")
+        title_lbl = QLabel(get_i18n().get("loading", "title"))
         title_lbl.setStyleSheet("font-size: 15px; font-weight: bold; color: #ffffff; border: none; background: transparent;")
         title_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.addWidget(title_lbl)
@@ -246,13 +252,13 @@ class LoadingOverlayWidget(QWidget):
         """)
         sb_layout = QVBoxLayout(status_box)
         sb_layout.setContentsMargins(14, 10, 14, 10)
-        self.status_lbl = QLabel("Extraction et analyse des fichiers de l'archive...")
+        self.status_lbl = QLabel(_t("extracting"))
         self.status_lbl.setStyleSheet("color: #38bdf8; font-family: 'Menlo', monospace; font-size: 11px; border: none; background: transparent;")
         self.status_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         sb_layout.addWidget(self.status_lbl)
         card_layout.addWidget(status_box)
 
-        sub_lbl = QLabel("Extraction en mémoire et génération de l'installateur à 3 colonnes...")
+        sub_lbl = QLabel(get_i18n().get("loading", "sub"))
         sub_lbl.setStyleSheet("font-size: 11px; color: #8f8f8f; border: none; background: transparent;")
         sub_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.addWidget(sub_lbl)
@@ -1115,7 +1121,7 @@ class MainWindow(QMainWindow):
         self.dest_hdr.setStyleSheet("color: #8f8f8f; font-size: 10px; background: transparent; border: none;")
         dest_layout.addWidget(self.dest_hdr)
 
-        self.dest_path_label = QLabel(self.staging_dir_path)
+        self.dest_path_label = QLabel(self.staging_dir_path if self.staging_dir_chosen else self.i18n.get("sidebar", "targetDesktop"))
         self.dest_path_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.dest_path_label.setStyleSheet("color: #38bdf8; font-size: 11px; font-weight: 500; font-family: 'Menlo', monospace; background: transparent; border: none;")
         dest_layout.addWidget(self.dest_path_label)
@@ -1266,7 +1272,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.right_sec_title)
 
         # Description textuelle
-        self.preview_desc_label = QLabel("Description de l'option...")
+        self.preview_desc_label = QLabel(_t("optionDesc"))
         self.preview_desc_label.setWordWrap(True)
         self.preview_desc_label.setStyleSheet("color: #ffffff; font-size: 13px; line-height: 1.5; border: none; background: transparent;")
         layout.addWidget(self.preview_desc_label)
@@ -1527,7 +1533,7 @@ class MainWindow(QMainWindow):
     def _on_hover_option(self, option: FomodOption):
         """Met à jour instantanément la description et l'image d'aperçu."""
         self.active_preview_option = option
-        self.preview_desc_label.setText(option.description or "(Aucune description disponible pour cette option)")
+        self.preview_desc_label.setText(option.description or _t("noDesc"))
         self.preview_image_label.set_source(self._preview_pixmap(option))
 
     def _on_select_option(self, option: FomodOption, group: FomodGroup):
@@ -1616,7 +1622,7 @@ class MainWindow(QMainWindow):
             self._export_worker.start()
         except Exception as e:
             logger.exception("Erreur génération staging")
-            QMessageBox.critical(self, "Erreur Staging", f"Une erreur est survenue lors de la génération du staging :\n{e}")
+            QMessageBox.critical(self, _t("stagingError"), _t("stagingBuildError", e=e))
 
     def _confirm_replace_staging(self, target: str) -> bool:
         """Dossier du mod déjà présent et non vide : remplacer son contenu après confirmation
@@ -1636,7 +1642,7 @@ class MainWindow(QMainWindow):
         try:
             shutil.rmtree(target)
         except OSError as e:
-            QMessageBox.critical(self, "Erreur Staging", f"Impossible de vider {target} :\n{e}")
+            QMessageBox.critical(self, _t("stagingError"), _t("cannotEmpty", target=target, e=e))
             return False
         return True
 
@@ -1654,7 +1660,7 @@ class MainWindow(QMainWindow):
 
     def _on_staging_write_error(self, err: str):
         self.loading_overlay.hide()
-        QMessageBox.critical(self, "Erreur Staging", f"Une erreur est survenue lors de l'écriture du staging :\n{err}")
+        QMessageBox.critical(self, _t("stagingError"), _t("stagingWriteError", e=err))
 
     # =========================================================================
     # OUVERTURE DES DIALOGUES MODALES
@@ -1685,14 +1691,7 @@ class MainWindow(QMainWindow):
     def _apply_data_dir(self, path: str, plugins: Set[str]):
         self.data_dir_path = path
         self.installed_basenames = plugins
-        if path:
-            self.data_status_label.setText(
-                f'<span style="font-weight:600; color:#dddddd;">Data :</span> <span style="color:#aaaaaa;">{os.path.basename(path)}</span><br/><span style="color:#38bdf8; font-size:10px;">({len(plugins)} plugins détectés)</span>'
-            )
-        else:
-            self.data_status_label.setText(
-                '<span style="font-weight:600; color:#dddddd;">Data :</span> <span style="font-style:italic; color:#aaaaaa;">(non défini)</span><br/><span style="color:#8f8f8f; font-size:10px;">(Cliquez pour simuler Skyrim)</span>'
-            )
+        self._update_data_status_label()
         # Scan intelligent : sélectionne automatiquement les patches correspondant aux mods trouvés
         self.auto_select_options_for_environment(preserve_manual=True)
         self._render_current_step()
@@ -1700,7 +1699,7 @@ class MainWindow(QMainWindow):
         self._update_header()
 
     def _pick_staging_destination(self) -> bool:
-        folder = QFileDialog.getExistingDirectory(self, "Sélectionner le dossier de destination du Staging")
+        folder = QFileDialog.getExistingDirectory(self, _t("pickStagingDir"))
         if folder:
             self.staging_dir_path = folder
             self.staging_dir_chosen = True
@@ -1726,15 +1725,15 @@ class MainWindow(QMainWindow):
     def _pick_archive_file(self):
         path, _ = QFileDialog.getOpenFileName(
             self,
-            "Sélectionner l'archive du mod FOMOD",
+            _t("pickArchive"),
             "",
-            "Archives Mod (*.zip *.7z *.rar *.tar *.gz);;Tous les fichiers (*.*)",
+            _t("archiveFilter"),
         )
         if path:
             self._load_archive(path)
 
     def _pick_folder_mod(self):
-        folder = QFileDialog.getExistingDirectory(self, "Sélectionner le dossier du mod FOMOD décompressé")
+        folder = QFileDialog.getExistingDirectory(self, _t("pickModFolder"))
         if folder:
             self._load_archive(folder)
 
@@ -1749,7 +1748,7 @@ class MainWindow(QMainWindow):
             self._extract_worker.wait(1000)
 
         # Affichage du modal de chargement animé (Screenshot 3)
-        self.loading_overlay.set_status(f"Extraction et analyse de : {os.path.basename(file_path)}...")
+        self.loading_overlay.set_status(_t("extractingFile", name=os.path.basename(file_path)))
         self.loading_overlay.resize(self.size())
         self.loading_overlay.show()
         self.loading_overlay.raise_()
@@ -1811,17 +1810,17 @@ class MainWindow(QMainWindow):
                 steps = [
                     FomodStep(
                         id="step_default",
-                        name="Installation du Mod",
+                        name=_t("modInstall"),
                         groups=[
                             FomodGroup(
                                 id="grp_default",
-                                name="Composants du mod",
+                                name=_t("modComponents"),
                                 type=GroupType.SelectExactlyOne,
                                 options=[
                                     FomodOption(
                                         id="opt_default",
-                                        name="Installer les fichiers par défaut",
-                                        description="Ce mod est configuré pour une installation automatique sans options personnalisées supplémentaires.",
+                                        name=_t("installDefaults"),
+                                        description=_t("autoInstallDesc"),
                                         files=[f for f in req_files if isinstance(f, FomodFileItem)],
                                         folders=[fo for fo in req_files if isinstance(fo, FomodFolderItem)],
                                         is_default=True,
@@ -1846,8 +1845,8 @@ class MainWindow(QMainWindow):
             logger.exception("Erreur lors de l'analyse du mod FOMOD extrait")
             QMessageBox.critical(
                 self,
-                "Erreur de traitement",
-                f"Une erreur est survenue lors de l'analyse du mod :\n{e}"
+                _t("processingError"),
+                _t("analysisError", e=e)
             )
 
     def _open_image_preview_modal(self):
