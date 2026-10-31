@@ -2,27 +2,23 @@
 
 Notes de version / release notes (EN + FR). Translations in IT and ES: see the Nexus Mods page.
 
-## Unreleased / À paraître
+## 1.3.0
 
 **English**
 
-- Animated splash screen at launch (4 s, the main window opens after 2 s), shared by all Skyrim Tools apps; static when macOS "Reduce motion" is on.
-- The interface language now follows the system's preferred language on first launch (English if it is not French, English, Spanish or Italian).
+- Signed with a Developer ID and notarized by Apple: macOS now opens the app without a security warning.
+- The app's launcher is now compiled from source when the app is built, instead of using PyInstaller's generic prebuilt launcher, which antivirus scanners tend to flag. No change in features.
+- New animated splash screen at launch.
+- The first letter of the app's name now uses the colour of its logo everywhere it appears.
+- Version number aligned across the Skyrim Mac Toolkit.
 
 **Français**
 
-- Écran de lancement animé (4 s, la fenêtre principale s'ouvre au bout de 2 s), commun aux applis Skyrim Tools ; fixe quand « Réduire les animations » est activé dans macOS.
-- La langue de l'interface suit désormais la langue préférée du système au premier lancement (anglais si ce n'est ni le français, ni l'anglais, ni l'espagnol, ni l'italien).
-
-## 1.0.1
-
-**English**
-
-- New-version notice: the app checks the latest GitHub release once a day and offers to open the Nexus page, remind you later or skip that version. Nothing is downloaded or installed.
-
-**Français**
-
-- Avertissement de nouvelle version : l'appli consulte la dernière release GitHub une fois par jour et propose d'ouvrir la page Nexus, de rappeler plus tard ou d'ignorer cette version. Rien n'est téléchargé ni installé.
+- Signée avec un certificat Developer ID et notarisée par Apple : macOS ouvre désormais l'appli sans avertissement de sécurité.
+- Le lanceur de l'appli est maintenant compilé depuis les sources à la construction de l'appli, au lieu du lanceur générique précompilé de PyInstaller, souvent signalé par les antivirus. Aucun changement de fonctionnalités.
+- Nouvel écran de lancement animé.
+- La première lettre du nom de l'appli prend la couleur de son logo partout où il est écrit.
+- Numéro de version commun à tout le Skyrim Mac Toolkit.
 
 <!-- gen_changelogs : entrées ci-dessous conservées -->
 

@@ -27,12 +27,17 @@ Detailed guide: [docs/README.en.md](docs/README.en.md)
 - Built-in **CBBE demo mod** to try the app without any archive.
 - Interface in **English, French, Italian and Spanish** (follows your Mac's language; can be changed in the app).
 
-### What's new in 1.0.1
+### What's new in 1.3.0
 
+- Signed with a Developer ID and notarized by Apple: macOS now opens the app without a security warning.
+- The app's launcher is now compiled from source when the app is built, instead of using PyInstaller's generic prebuilt launcher, which antivirus scanners tend to flag. No change in features.
+- New animated splash screen at launch.
+- The first letter of the app's name now uses the colour of its logo everywhere it appears.
+- Version number aligned across the Skyrim Mac Toolkit.
 
 ### Updates
 
-From version 1.0.1 the app checks once a day whether a newer release exists on GitHub and offers to open the Nexus page, remind you later or skip that version. Nothing is downloaded or installed automatically. The full history is in [CHANGELOG.md](CHANGELOG.md).
+The app checks once a day whether a newer release exists on GitHub and offers to open the Nexus page, remind you later or skip that version. Nothing is downloaded or installed automatically. The full history is in [CHANGELOG.md](CHANGELOG.md).
 
 ### Screenshots
 
@@ -101,12 +106,17 @@ Guide détaillé : [docs/README.fr.md](docs/README.fr.md)
 - **Mod de démo CBBE** intégré pour essayer l'appli sans archive.
 - Interface en **français, anglais, italien et espagnol** (suit la langue du Mac ; modifiable dans l'appli).
 
-### Nouveautés de la 1.0.1
+### Nouveautés de la 1.3.0
 
+- Signée avec un certificat Developer ID et notarisée par Apple : macOS ouvre désormais l'appli sans avertissement de sécurité.
+- Le lanceur de l'appli est maintenant compilé depuis les sources à la construction de l'appli, au lieu du lanceur générique précompilé de PyInstaller, souvent signalé par les antivirus. Aucun changement de fonctionnalités.
+- Nouvel écran de lancement animé.
+- La première lettre du nom de l'appli prend la couleur de son logo partout où il est écrit.
+- Numéro de version commun à tout le Skyrim Mac Toolkit.
 
 ### Mises à jour
 
-À partir de la version 1.0.1, l'appli vérifie une fois par jour si une version plus récente existe sur GitHub et propose d'ouvrir la page Nexus, de rappeler plus tard ou d'ignorer cette version. Rien n'est téléchargé ni installé automatiquement. L'historique complet est dans [CHANGELOG.md](CHANGELOG.md).
+L'appli vérifie une fois par jour si une version plus récente existe sur GitHub et propose d'ouvrir la page Nexus, de rappeler plus tard ou d'ignorer cette version. Rien n'est téléchargé ni installé automatiquement. L'historique complet est dans [CHANGELOG.md](CHANGELOG.md).
 
 ### Captures d'écran
 

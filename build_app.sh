@@ -48,6 +48,9 @@ python3 -m pip install --quiet --upgrade pyinstaller py7zr PyQt6
 
 # 3. Compilation (tout est généré dans le dossier temporaire)
 export PYINSTALLER_CONFIG_DIR="$TMP_DIR/config"
+# Lanceur PyInstaller compilé depuis les sources, contre les faux positifs antivirus (absent hors de ce dossier d'outils : lanceur standard).
+PYI_SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/_tools/pyinstaller_source.sh"
+if [ -x "$PYI_SRC" ]; then "$PYI_SRC" python3; fi
 python3 -m PyInstaller --noconfirm --clean \
     --distpath "$TMP_DIR/dist" \
     --workpath "$TMP_DIR/work" \

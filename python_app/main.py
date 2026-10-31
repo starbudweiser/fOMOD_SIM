@@ -72,7 +72,7 @@ def main():
         app.setFont(QFont(".AppleSystemUIFont", 13))
     app.setStyle("Fusion")
     app.setApplicationName("fOMODSIM")
-    app.setApplicationVersion("1.0.1")
+    app.setApplicationVersion("1.3.0")
     app.setOrganizationName("SkyrimTools")
     app.setStyleSheet(socle_qt.qss(full=False) + DARK_THEME_QSS)
 
