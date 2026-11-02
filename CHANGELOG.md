@@ -2,6 +2,16 @@
 
 Notes de version / release notes (EN + FR). Translations in IT and ES: see the Nexus Mods page.
 
+## 1.3.1
+
+**English**
+
+- Opening a FOMOD passed to the app at launch (for example with “Open With” in the Finder) works again: the app used to quit instead of loading it.
+
+**Français**
+
+- Ouvrir un FOMOD passé à l'appli au lancement (par exemple avec « Ouvrir avec » dans le Finder) fonctionne de nouveau : l'appli se fermait au lieu de le charger.
+
 ## 1.3.0
 
 **English**
