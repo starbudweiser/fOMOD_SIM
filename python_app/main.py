@@ -78,12 +78,14 @@ def main():
 
     window = MainWindow()
 
-    # Si un fichier ou dossier d'archive est passé en argument CLI
-    if len(sys.argv) > 1:
-        target_path = sys.argv[1]
+    # Si un fichier ou dossier d'archive est passé en argument CLI (les options macOS comme -psn_… ou
+    # -AppleLanguages sont ignorées : seul le premier chemin existant compte)
+    args = [a for a in sys.argv[1:] if not a.startswith("-") and not a.startswith("(")]
+    if args:
+        target_path = args[0]
         if os.path.exists(target_path):
             logger.info(f"Ouverture directe via CLI : {target_path}")
-            window._start_archive_extraction(target_path)
+            window._load_archive(target_path)
         else:
             logger.warning(f"Fichier passé en argument inexistant : {target_path}")
 
