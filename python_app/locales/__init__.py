@@ -4,8 +4,13 @@ Gestionnaire d'Internationalisation (i18n) pour fOMODSIM.
 Supporte Français ('fr'), Anglais ('en'), Italien ('it'), Espagnol ('es').
 """
 
-from typing import Dict, Any, List, Tuple
-from PyQt6.QtCore import QLocale, QSettings
+from typing import Dict, Any
+from PyQt6.QtCore import QSettings
+
+try:  # module commun : langue du Mac et menu « Langue »
+    from python_app import lang_menu
+except ImportError:
+    import lang_menu
 
 try:
     from python_app.locales.fr import STRINGS as FR_STRINGS
@@ -18,13 +23,6 @@ except ImportError:
     from locales.it import STRINGS as IT_STRINGS
     from locales.es import STRINGS as ES_STRINGS
 
-AVAILABLE_LANGUAGES: List[Tuple[str, str, str]] = [
-    ("fr", "Français", "🇫🇷"),
-    ("en", "English", "🇬🇧"),
-    ("it", "Italiano", "🇮🇹"),
-    ("es", "Español", "🇪🇸"),
-]
-
 TRANSLATIONS: Dict[str, Dict[str, Any]] = {
     "fr": FR_STRINGS,
     "en": EN_STRINGS,
@@ -34,16 +32,6 @@ TRANSLATIONS: Dict[str, Dict[str, Any]] = {
 
 SETTINGS_KEY = "language"
 DEFAULT_LANGUAGE = "fr"
-
-
-def system_language() -> str:
-    """Langue préférée du système si elle fait partie des 4, sinon anglais."""
-    for name in QLocale.system().uiLanguages():
-        code = name[:2].lower()
-        if code in TRANSLATIONS:
-            return code
-        break  # seule la langue préférée compte
-    return "en"
 
 
 class I18nManager:
@@ -59,22 +47,26 @@ class I18nManager:
 
     def _init_settings(self):
         self.settings = QSettings("SkyrimTools", "FOMODSimulator")
-        saved_lang = self.settings.value(SETTINGS_KEY, None)
-        if saved_lang not in TRANSLATIONS:
-            saved_lang = system_language()
-        self._current_lang = saved_lang
+        # « auto » (langue du Mac, par défaut) ou code choisi dans le menu « Langue »
+        self._choice = lang_menu.normalize_choice(self.settings.value(SETTINGS_KEY, lang_menu.AUTO))
+        self._current_lang = lang_menu.resolve(self._choice)
+
+    @property
+    def choice(self) -> str:
+        return self._choice
 
     @property
     def current_language(self) -> str:
         return self._current_lang
 
-    def set_language(self, lang_code: str) -> bool:
-        if lang_code in TRANSLATIONS and lang_code != self._current_lang:
+    def set_language(self, choice: str) -> bool:
+        """Mémorise le choix (« auto » ou code) ; vrai si la langue affichée change."""
+        self._choice = lang_menu.normalize_choice(choice)
+        self.settings.setValue(SETTINGS_KEY, self._choice)
+        lang_code = lang_menu.resolve(self._choice)
+        if lang_code != self._current_lang:
             self._current_lang = lang_code
-            self.settings.setValue(SETTINGS_KEY, lang_code)
             return True
-        elif lang_code in TRANSLATIONS:
-            self.settings.setValue(SETTINGS_KEY, lang_code)
         return False
 
     @property

@@ -53,12 +53,12 @@ from .modals import OpenModModal, DataDirModal, StagingResultModal, ImagePreview
 from .preview_generator import get_preview_pixmap_for_path, load_pixmap_safely
 
 try:
-    from ..locales import get_i18n, AVAILABLE_LANGUAGES
+    from ..locales import get_i18n
 except (ImportError, ValueError):
     try:
-        from python_app.locales import get_i18n, AVAILABLE_LANGUAGES
+        from python_app.locales import get_i18n
     except ImportError:
-        from locales import get_i18n, AVAILABLE_LANGUAGES
+        from locales import get_i18n
 
 
 
@@ -522,7 +522,6 @@ class MainWindow(QMainWindow):
         self.loading_overlay.hide()
 
         self._update_header()
-        self._update_lang_selector_ui()
         self.retranslate_ui()
 
     def _create_welcome_view(self) -> QWidget:
@@ -545,29 +544,6 @@ class MainWindow(QMainWindow):
         card_layout.setContentsMargins(28, 20, 28, 24)
         card_layout.setSpacing(14)
         card_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        # 0. Boutons de choix de langue centrés et compacts
-        lang_bar = QWidget()
-        lang_bar_layout = QHBoxLayout(lang_bar)
-        lang_bar_layout.setContentsMargins(0, 0, 0, 0)
-        lang_bar_layout.setSpacing(6)
-        lang_bar_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        self.welcome_lang_buttons: Dict[str, QPushButton] = {}
-        for code, label, flag in AVAILABLE_LANGUAGES:
-            btn = QPushButton(f"{flag} {label}")
-            btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            btn.setFixedHeight(25)
-            btn.clicked.connect(lambda _checked, c=code: self._change_language(c))
-            self.welcome_lang_buttons[code] = btn
-            lang_bar_layout.addWidget(btn)
-
-        card_layout.addWidget(lang_bar, alignment=Qt.AlignmentFlag.AlignCenter)
-
-        lang_divider = QFrame()
-        lang_divider.setFrameShape(QFrame.Shape.HLine)
-        lang_divider.setStyleSheet("background-color: #2c2c2c; max-height: 1px; border: none; margin-bottom: 2px;")
-        card_layout.addWidget(lang_divider)
 
         # Badge circulaire avec icône 📦
         badge = QFrame()
@@ -719,57 +695,10 @@ class MainWindow(QMainWindow):
 
         return sim_widget
 
-    def _change_language(self, lang_code: str):
-        self.i18n.set_language(lang_code)
-        self._update_lang_selector_ui()
-        self.retranslate_ui()
-
-    def _on_header_lang_changed(self, idx: int):
-        if 0 <= idx < len(AVAILABLE_LANGUAGES):
-            lang_code = AVAILABLE_LANGUAGES[idx][0]
-            if lang_code != self.i18n.current_language:
-                self._change_language(lang_code)
-
-    def _update_lang_selector_ui(self):
-        curr = self.i18n.current_language
-        for code, btn in getattr(self, "welcome_lang_buttons", {}).items():
-            if code == curr:
-                btn.setStyleSheet("""
-                    QPushButton {
-                        background-color: #0ea5e9;
-                        color: #ffffff;
-                        font-weight: 600;
-                        font-size: 11px;
-                        border-radius: 5px;
-                        border: 1px solid #0ea5e9;
-                        padding: 0 9px;
-                    }
-                """)
-            else:
-                btn.setStyleSheet("""
-                    QPushButton {
-                        background-color: #2a2a2a;
-                        color: #aaaaaa;
-                        font-weight: 500;
-                        font-size: 11px;
-                        border-radius: 5px;
-                        border: 1px solid #2a2a2a;
-                        padding: 0 9px;
-                    }
-                    QPushButton:hover {
-                        background-color: #333333;
-                        border-color: #333333;
-                        color: #ffffff;
-                    }
-                """)
-
-        if hasattr(self, "header_lang_combo"):
-            self.header_lang_combo.blockSignals(True)
-            for i, (code, _l, _f) in enumerate(AVAILABLE_LANGUAGES):
-                if code == curr:
-                    self.header_lang_combo.setCurrentIndex(i)
-                    break
-            self.header_lang_combo.blockSignals(False)
+    def _change_language(self, choice: str):
+        """Choix du menu « Langue » de la barre de menus (« auto » ou code)."""
+        if self.i18n.set_language(choice):
+            self.retranslate_ui()
 
     def _update_data_status_label(self):
         if not hasattr(self, "data_status_label"):
@@ -955,46 +884,6 @@ class MainWindow(QMainWindow):
         self.env_badge_label.setStyleSheet("color: #aaaaaa; font-size: 11px; background: transparent; border: none;")
         right_box.addWidget(self.env_badge_label)
 
-        self.pipe3 = QLabel("|")
-        self.pipe3.setStyleSheet("color: #444444; background: transparent; border: none;")
-        right_box.addWidget(self.pipe3)
-
-        # Menu déroulant de changement de langue
-        self.header_lang_combo = QComboBox()
-        self.header_lang_combo.setFixedHeight(24)
-        self.header_lang_combo.setCursor(Qt.CursorShape.PointingHandCursor)
-        for code, label, flag in AVAILABLE_LANGUAGES:
-            self.header_lang_combo.addItem(f"{flag} {label}", code)
-        self.header_lang_combo.setStyleSheet("""
-            QComboBox {
-                background-color: #222222;
-                color: #ffffff;
-                border: 1px solid #333333;
-                border-radius: 4px;
-                padding: 0 6px;
-                font-size: 11px;
-                font-weight: 500;
-            }
-            QComboBox:hover {
-                border-color: #0ea5e9;
-                background-color: #262626;
-            }
-            QComboBox::drop-down {
-                border: none;
-                width: 14px;
-            }
-            QComboBox QAbstractItemView {
-                background-color: #1e1e1e;
-                color: #dddddd;
-                selection-background-color: #0ea5e9;
-                selection-color: #ffffff;
-                border: 1px solid #333333;
-                border-radius: 4px;
-                padding: 4px;
-            }
-        """)
-        self.header_lang_combo.currentIndexChanged.connect(self._on_header_lang_changed)
-        right_box.addWidget(self.header_lang_combo)
 
         layout.addLayout(right_box)
         return header

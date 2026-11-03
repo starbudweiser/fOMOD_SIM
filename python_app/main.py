@@ -18,6 +18,7 @@ if current_dir not in sys.path:
 
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import Qt
+import lang_menu
 import updater
 
 try:
@@ -97,6 +98,7 @@ def main():
     )
     splash.start()
     splash.open_main_window(window)
+    lang_menu.install_qt(window, lambda: window.i18n.choice, window._change_language, lambda code: None)
     updater.start_qt(window, "fOMOD_SIM", lang=lambda: window.i18n.current_language)  # nouvelle version ? (au plus une fois par jour)
     sys.exit(app.exec())
 
