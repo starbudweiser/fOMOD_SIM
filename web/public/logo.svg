@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="100 100 824 824" width="824" height="824">
+  <!-- fOMODSIM : colis isométrique (le mod) validé par une coche (la simulation). Grille macOS : carré de 824 px. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2b8ef0"/>
+      <stop offset="1" stop-color="#0f5fc4"/>
+    </linearGradient>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)"/>
+  <!-- Ombre portée plate sous le colis -->
+  <polygon points="512,800 752,662 752,700 512,838 272,700 272,662" fill="#0a4a9c" opacity="0.45"/>
+  <!-- Faces du colis -->
+  <polygon points="272,400 512,538 512,800 272,662" fill="#e4effc"/>
+  <polygon points="512,538 752,400 752,662 512,800" fill="#b6d3f5"/>
+  <polygon points="512,262 752,400 512,538 272,400" fill="#ffffff"/>
+  <!-- Ruban adhésif : sur le dessus puis le long de la face droite -->
+  <polygon points="372,342 412,319 652,457 612,480" fill="#7cc2ff"/>
+  <polygon points="612,480 652,457 652,719 612,742" fill="#5aa6ec"/>
+  <!-- Pastille de validation -->
+  <circle cx="724" cy="724" r="132" fill="#0f5fc4"/>
+  <circle cx="724" cy="724" r="108" fill="#4ade80"/>
+  <polyline points="672,726 708,762 778,690" fill="none" stroke="#ffffff" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

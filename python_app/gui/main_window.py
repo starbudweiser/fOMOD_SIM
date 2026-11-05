@@ -52,6 +52,12 @@ from .mod_info_dialog import ModInfoDialog
 from .modals import OpenModModal, DataDirModal, StagingResultModal, ImagePreviewModal
 from .preview_generator import get_preview_pixmap_for_path, load_pixmap_safely
 
+
+def _asset_path(name: str) -> str:
+    """Chemin d'un fichier de assets/ : dossier du paquet PyInstaller, sinon racine du projet."""
+    base = getattr(sys, "_MEIPASS", None) or os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    return os.path.join(base, "assets", name)
+
 try:
     from ..locales import get_i18n
 except (ImportError, ValueError):
@@ -545,24 +551,18 @@ class MainWindow(QMainWindow):
         card_layout.setSpacing(14)
         card_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        # Badge circulaire avec icône 📦
-        badge = QFrame()
-        badge.setObjectName("WelcomeBadge")
+        # Icône de l'appli (carré utile de 824 px de icon.png, sans les marges transparentes)
+        badge = QLabel()
         badge.setFixedSize(64, 64)
-        badge.setStyleSheet("""
-            QFrame#WelcomeBadge {
-                background-color: #262626;
-                border: 1px solid #404040;
-                border-radius: 32px;
-            }
-        """)
-        badge_layout = QVBoxLayout(badge)
-        badge_layout.setContentsMargins(0, 0, 0, 0)
-        badge_icon = QLabel("📦")
-        badge_icon.setFont(QFont("Apple Color Emoji", 26))
-        badge_icon.setStyleSheet("border: none; background: transparent;")
-        badge_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        badge_layout.addWidget(badge_icon)
+        badge.setStyleSheet("border: none; background: transparent;")
+        icon = QPixmap(_asset_path("icon.png"))
+        if not icon.isNull():
+            ratio = self.devicePixelRatioF() or 2.0
+            icon = icon.copy(100, 100, 824, 824).scaled(
+                int(64 * ratio), int(64 * ratio),
+                Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            icon.setDevicePixelRatio(ratio)
+            badge.setPixmap(icon)
         card_layout.addWidget(badge, alignment=Qt.AlignmentFlag.AlignCenter)
 
         self.welcome_title_lbl = QLabel(self.i18n.get("welcome", "title"))

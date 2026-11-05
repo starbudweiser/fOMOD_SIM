@@ -877,9 +877,7 @@ export default function App() {
             </div>
 
             {/* Logo / Icône */}
-            <div className="w-16 h-16 rounded-full bg-[#262626] border border-[#3d3d3d] flex items-center justify-center text-3xl mb-4 shadow-inner">
-              📦
-            </div>
+            <img src="/logo.svg" alt="" className="w-16 h-16 mb-4" />
 
             <h2 className="text-xl font-bold text-white tracking-wide mb-1">
               {strings.welcome.title}

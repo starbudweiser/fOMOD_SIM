@@ -20,6 +20,7 @@ from PyQt6.QtGui import (
     QGuiApplication,
     QPainter,
     QPainterPath,
+    QPen,
     QPolygonF,
     QTransform,
 )
@@ -38,14 +39,23 @@ MAIN_WINDOW_AT_MS = 2000
 MIN_SHOWN_MS = 4000
 LEAVE_MS = 600
 
-# Couleurs plates : carte sombre, bleu de l'icône, losanges blancs
+# Couleurs plates : carte sombre, bleu de l'icône, colis clair, coche verte
 CARD_BG = QColor("#1b1c21")
 BLUE = QColor("#1677dc")
 BLUE_LIGHT = QColor("#5fb4ff")
+BADGE_RING = QColor("#0f5fc4")
+BADGE_FILL = QColor("#4ade80")
 
-# Losanges de l'icône (centre x, centre y) dans le carré de 824 px de icon.png, ordre d'empilement
-DIAMONDS = [(412, 555), (278, 440), (545, 440), (278, 272), (545, 272)]
-DIAMOND_HALF = (128, 80)
+# Pièces du colis de icon.svg (coordonnées du canevas de 1024 px, carré utile de 824 px centré),
+# dans l'ordre d'arrivée : faces gauche, droite, dessus, puis ruban
+BOX_PIECES = [
+    ("#e4effc", [(272, 400), (512, 538), (512, 800), (272, 662)]),
+    ("#b6d3f5", [(512, 538), (752, 400), (752, 662), (512, 800)]),
+    ("#ffffff", [(512, 262), (752, 400), (512, 538), (272, 400)]),
+    ("#7cc2ff", [(372, 342), (412, 319), (652, 457), (612, 480)]),
+    ("#5aa6ec", [(612, 480), (652, 457), (652, 719), (612, 742)]),
+]
+BADGE_CENTER = (724, 724)
 
 
 def _bezier(x1, y1, x2, y2) -> QEasingCurve:
@@ -69,6 +79,15 @@ def _progress(t: float, delay: float, duration: float, curve: QEasingCurve) -> f
     if t >= delay + duration:
         return 1.0
     return curve.valueForProgress((t - delay) / duration)
+
+
+def _partial_path(path: QPainterPath, fraction: float) -> QPainterPath:
+    """Début d'un tracé, jusqu'à la fraction donnée de sa longueur (coche dessinée au fil du temps)."""
+    out = QPainterPath(path.pointAtPercent(0))
+    steps = 24
+    for n in range(1, steps + 1):
+        out.lineTo(path.pointAtPercent(path.percentAtLength(path.length() * fraction * n / steps)))
+    return out
 
 
 def reduce_motion_enabled() -> bool:
@@ -255,23 +274,43 @@ class SplashScreen(QWidget):
         p.setBrush(BLUE)
         p.drawRoundedRect(QRectF(-half, -half, size, size), 24, 24)
 
-        # Losanges : chute en culbute et empilement
+        # Colis : les faces tombent une à une et s'emboîtent
         unit = size / 824
-        for i, (cx, cy) in enumerate(DIAMONDS):
+        for i, (color, points) in enumerate(BOX_PIECES):
             delay = 150 + i * 90
             d = _progress(t, delay, 900, EASE_DROP)
             fade = _progress(t, delay, 450, EASE_OUT)
             if fade <= 0:
                 continue
             p.save()
-            p.translate((cx - 412) * unit, (cy - 412) * unit - 70 * (1 - d))
-            p.rotate(160 * (1 - d))
-            ds = 0.3 + 0.7 * d
-            p.scale(ds, ds)
+            p.translate(0, -70 * (1 - d))
             p.setOpacity(p.opacity() * fade)
-            hw, hh = DIAMOND_HALF[0] * unit, DIAMOND_HALF[1] * unit
-            p.setBrush(QColor("#ffffff"))
-            p.drawPolygon(QPolygonF([QPointF(0, -hh), QPointF(hw, 0), QPointF(0, hh), QPointF(-hw, 0)]))
+            p.setBrush(QColor(color))
+            p.drawPolygon(QPolygonF([QPointF((x - 512) * unit, (y - 512) * unit) for x, y in points]))
+            p.restore()
+
+        # Pastille de validation : apparition avec rebond, puis tracé de la coche
+        k = _progress(t, 700, 600, EASE_DROP)
+        if k > 0:
+            p.save()
+            p.translate((BADGE_CENTER[0] - 512) * unit, (BADGE_CENTER[1] - 512) * unit)
+            p.scale(k, k)
+            p.setBrush(BADGE_RING)
+            p.drawEllipse(QPointF(0, 0), 132 * unit, 132 * unit)
+            p.setBrush(BADGE_FILL)
+            p.drawEllipse(QPointF(0, 0), 108 * unit, 108 * unit)
+            c = _progress(t, 1000, 450, EASE_OUT)
+            if c > 0:
+                pts = [QPointF(-52 * unit, 2 * unit), QPointF(-16 * unit, 38 * unit), QPointF(54 * unit, -34 * unit)]
+                path = QPainterPath(pts[0])
+                path.lineTo(pts[1])
+                path.lineTo(pts[2])
+                pen = QPen(QColor("#ffffff"), 30 * unit, Qt.PenStyle.SolidLine,
+                           Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin)
+                p.setPen(pen)
+                p.setBrush(Qt.BrushStyle.NoBrush)
+                p.drawPath(path if c >= 1 else _partial_path(path, c))
+                p.setPen(Qt.PenStyle.NoPen)
             p.restore()
         p.restore()
 
