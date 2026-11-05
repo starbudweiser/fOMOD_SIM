@@ -274,8 +274,15 @@ class WrapChoice(QWidget):
         lay = QHBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(int(m("space-2.5")))
+        # case et libellé calés en haut ; la case a la hauteur optique de la première ligne
+        # (deux fois le milieu des capitales) : son centre tombe au milieu des majuscules
+        fm = self.label.fontMetrics()
+        self.box.setFixedHeight(round(2 * (fm.ascent() - fm.capHeight() / 2)))
+        # le style macOS décale sinon la case de quelques px (marges de « layout item »)
+        self.box.setAttribute(Qt.WidgetAttribute.WA_LayoutUsesWidgetRect)
+        self.box.setFixedWidth(int(m("size-choice")))  # rien que l'indicateur : l'écart vient du layout
         lay.addWidget(self.box, 0, Qt.AlignmentFlag.AlignTop)
-        lay.addWidget(self.label, 1)
+        lay.addWidget(self.label, 1, Qt.AlignmentFlag.AlignTop)
         self.toggled = self.box.toggled
         self.setFocusProxy(self.box)
 
@@ -545,6 +552,7 @@ QComboBox QAbstractItemView {{ background-color: {k['surface']}; color: {k['text
 QComboBox QAbstractItemView::item {{ min-height: {m('size-control') - 8}px; padding: 0 {m('space-2')}px; border-radius: {r}px; }}
 
 /* Choix */
+QSlider {{ background: transparent; }}
 QCheckBox, QRadioButton {{ background: transparent; spacing: {m('space-2.5')}px; color: {k['text']}; }}
 QCheckBox::indicator, QRadioButton::indicator {{ width: {m('size-choice') - 3}px; height: {m('size-choice') - 3}px; border: 1.5px solid {k['border-control']}; background-color: {k['surface']}; }}
 QCheckBox::indicator {{ border-radius: {r}px; }}
