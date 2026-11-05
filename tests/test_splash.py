@@ -9,7 +9,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PyQt6.QtCore import QEventLoop, QTimer
 from PyQt6.QtWidgets import QApplication, QWidget
 
-from python_app.gui.splash import SPLASH_HEIGHT, SPLASH_WIDTH, SplashScreen
+from python_app.gui.splash import MIN_SHOWN_MS, SPLASH_HEIGHT, SPLASH_WIDTH, SplashScreen
 from python_app.locales import TRANSLATIONS
 
 app = QApplication.instance() or QApplication([])
@@ -57,7 +57,7 @@ class TestSplash(unittest.TestCase):
                     shown_at = time.monotonic() - start
             self.assertAlmostEqual(shown_at, 2.0, delta=0.2)
             self.assertTrue(splash._closed)
-            self.assertAlmostEqual(splash._leave_at / 1000, 4.0, delta=0.2)
+            self.assertAlmostEqual(splash._leave_at / 1000, MIN_SHOWN_MS / 1000, delta=0.2)
             window.close()
 
 
