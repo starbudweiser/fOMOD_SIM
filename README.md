@@ -5,6 +5,16 @@
 **FOMOD installer simulator: walk through a mod's installer and preview the result, no mod manager needed.**  
 *Simulateur d'installateurs FOMOD : parcourez l'installateur d'un mod et prévisualisez le résultat, sans gestionnaire de mods.*
 
+### About
+
+fOMODSIM walks through a mod's FOMOD installer and previews the result, no mod manager needed.
+
+- **Authors:** Starbudweiser & Claude Code (Anthropic)
+- **License:** MIT ([LICENSE](LICENSE)). © 2026 Starbudweiser.
+- Provided as is, without warranty.
+- FOMOD behavior modeled on Mod Organizer 2, not affiliated with its authors.
+- In the app: **fOMODSIM › About fOMODSIM** (web version: the **About** link in the header).
+
 🇬🇧 [English](#-english) · 🇫🇷 [Français](#-français)
 
 💬 **Support & community:** [Discord](https://discord.gg/xdDVDPQsYs) · *Aide et communauté : [Discord](https://discord.gg/xdDVDPQsYs)*

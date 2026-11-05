@@ -718,10 +718,24 @@ class MainWindow(QMainWindow):
                 f'<span style="font-weight:600; color:#dddddd;">{data_lbl}</span> <span style="font-style:italic; color:#aaaaaa;">{not_set}</span><br/><span style="color:#8f8f8f; font-size:10px;">{click_lbl}</span>'
             )
 
+    def install_about_menu(self):
+        """Entrée « À propos de fOMODSIM » : macOS la range dans le menu de l'appli, au-dessus de « Quitter »."""
+        from PyQt6.QtGui import QAction
+        self.about_action = QAction(self.i18n.get("about", "menu"), self)
+        self.about_action.setMenuRole(QAction.MenuRole.AboutRole)
+        self.about_action.triggered.connect(self.show_about)
+        self.menuBar().addMenu("fOMODSIM").addAction(self.about_action)
+
+    def show_about(self):
+        from .about_dialog import show_about
+        show_about(self.i18n, _asset_path("icon.png"), self)
+
     def retranslate_ui(self):
         """Met à jour dynamiquement tous les textes de l'interface selon la langue active."""
         i18n = self.i18n
         self.setWindowTitle(i18n.get("header", "title"))
+        if hasattr(self, "about_action"):
+            self.about_action.setText(i18n.get("about", "menu"))
 
         # En-tête
         if hasattr(self, "btn_close"):

@@ -149,6 +149,16 @@ export interface Translations {
       close: string;
     };
   };
+  about: {
+    link: string;
+    title: string;
+    version: string;
+    tagline: string;
+    license: string;
+    disclaimer: string;
+    credit: string;
+    close: string;
+  };
 }
 
 export type Language = 'fr' | 'en' | 'it' | 'es';

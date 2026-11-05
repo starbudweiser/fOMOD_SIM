@@ -54,6 +54,7 @@ import StagingResultModal from './components/StagingResultModal';
 import OpenModModal from './components/OpenModModal';
 import FolderSelectModal from './components/FolderSelectModal';
 import StagingWarningModal from './components/StagingWarningModal';
+import AboutModal from './components/AboutModal';
 import LanguageSelector from './components/LanguageSelector';
 import { useI18n } from './locales';
 
@@ -110,6 +111,7 @@ export default function App() {
   const [directWriteSuccess, setDirectWriteSuccess] = useState<boolean>(false);
   const [stagingModalOpen, setStagingModalOpen] = useState<boolean>(false);
   const [folderSelectModalOpen, setFolderSelectModalOpen] = useState<boolean>(false);
+  const [isAboutOpen, setIsAboutOpen] = useState<boolean>(false);
   const [stagingWarningOpen, setStagingWarningOpen] = useState<boolean>(false);
   // Archive ou dossier du mod ouvert : nom du sous-dossier de staging
   const [stagingTargetDisplay, setStagingTargetDisplay] = useState<string>('');
@@ -836,6 +838,13 @@ export default function App() {
           </h1>
         </div>
         <div className="flex items-center gap-2.5 shrink-0 text-xs font-mono text-[#888]">
+          <button
+            onClick={() => setIsAboutOpen(true)}
+            className="font-sans text-[#aaa] hover:text-white transition-colors cursor-pointer"
+          >
+            {strings.about.link}
+          </button>
+          <span className="text-[#555]">|</span>
           <LanguageSelector variant="dropdown" />
           <span className="text-[#555]">|</span>
           {steps.length > 0 ? (
@@ -1285,6 +1294,7 @@ export default function App() {
         }}
       />
 
+      <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
       <StagingWarningModal
         isOpen={stagingWarningOpen}
         onClose={() => setStagingWarningOpen(false)}

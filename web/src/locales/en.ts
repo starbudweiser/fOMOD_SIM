@@ -151,4 +151,14 @@ export const en: Translations = {
       close: 'Close',
     },
   },
+  about: {
+    link: "About",
+    title: "About fOMODSIM",
+    version: "Version {v}",
+    tagline: "Walk through a mod's FOMOD installer and preview the result, no mod manager needed.",
+    license: "MIT License. © 2026 Starbudweiser.",
+    disclaimer: "Provided as is, without warranty.",
+    credit: "FOMOD behavior modeled on Mod Organizer 2, not affiliated with its authors.",
+    close: "Close",
+  },
 };

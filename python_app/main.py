@@ -98,6 +98,7 @@ def main():
     )
     splash.start()
     splash.open_main_window(window)
+    window.install_about_menu()  # « À propos de fOMODSIM » (Socle)
     lang_menu.install_qt(window, lambda: window.i18n.choice, window._change_language, lambda code: None)
     updater.start_qt(window, "fOMOD_SIM", lang=lambda: window.i18n.current_language)  # nouvelle version ? (au plus une fois par jour)
     sys.exit(app.exec())

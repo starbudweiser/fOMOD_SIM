@@ -203,4 +203,12 @@ STRINGS = {
         "subtitle": "SIMULATEUR FOMOD",
         "footer": "Pour Skyrim SE / AE",
     },
+    "about": {
+        "menu": "À propos de fOMODSIM",
+        "version": "Version {v} ({b})",
+        "tagline": "Parcourez l'installateur FOMOD d'un mod et prévisualisez le résultat, sans gestionnaire de mods.",
+        "license": "Licence MIT. © 2026 Starbudweiser.",
+        "disclaimer": "Fourni en l'état, sans garantie.",
+        "credit": "Comportement FOMOD calqué sur Mod Organizer 2, sans lien avec ses auteurs.",
+    },
 }
