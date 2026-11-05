@@ -90,7 +90,7 @@ def main():
         else:
             logger.warning(f"Fichier passé en argument inexistant : {target_path}")
 
-    # Splash animé (règle Socle) : fenêtre principale à t = 2 s, sortie du splash à t = 4 s
+    # Splash animé (règle Socle) : fenêtre principale à t = 2 s, sortie du splash à t = 3 s
     splash = SplashScreen(
         "fOMODSIM",
         window.i18n.get("splash", "subtitle"),

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Splash animé : dimensions Socle, traductions et chronologie (fenêtre à 2 s, sortie à 4 s)."""
+"""Splash animé : dimensions Socle, traductions et chronologie (fenêtre à 2 s, sortie à 3 s)."""
 import os
 import time
 import unittest

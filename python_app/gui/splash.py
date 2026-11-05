@@ -4,7 +4,7 @@
 
 Fenêtre sans cadre, transparente, centrée, de 500 × 190 px (carte de 476 × 166 px et marge de 12 px,
 commune aux applis). Effets sobres (Socle) : carte plate, entrée de l'icône et du nom, filet, sous-titre.
-Chronologie : t = 0 splash visible → t = 2 s fenêtre principale → t = 4 s sortie
+Chronologie : t = 0 splash visible → t = 2 s fenêtre principale → t = 3 s sortie
 animée de 600 ms. Tout est dessiné au QPainter d'après le temps écoulé, image par image.
 """
 
@@ -36,7 +36,7 @@ LOGO = 108
 GAP = 26
 TITLE_SIZE = 40  # size-splash-title (Socle)
 MAIN_WINDOW_AT_MS = 2000
-MIN_SHOWN_MS = 4000
+MIN_SHOWN_MS = 3000
 LEAVE_MS = 600
 
 # Couleurs plates : carte sombre, bleu de l'icône, colis clair, coche verte
@@ -157,7 +157,7 @@ class SplashScreen(QWidget):
 
     def open_main_window(self, window):
         """Ouvre la fenêtre principale à t = 2 s (ou tout de suite si l'appli est prête plus tard),
-        puis fait sortir le splash à t = 4 s, jamais avant que la fenêtre soit affichée."""
+        puis fait sortir le splash à t = 3 s, jamais avant que la fenêtre soit affichée."""
         def show_window():
             window.show()
             window.raise_()
