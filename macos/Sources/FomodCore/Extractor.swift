@@ -234,14 +234,14 @@ private func extractListed(_ archivePath: String, flavor: Flavor, progress: ((St
     var toLoad: [String] = []  // clés minuscules des fichiers à lire d'office
 
     for (idx, item) in listed.enumerated() {
-        let raw = item.member
+        let raw = stripCP437(item.member)
         if flavor == .tar {
             if item.isSymlink { continue }
             if raw.contains("__MACOSX") || raw.hasSuffix(".DS_Store") { continue }
         } else {
             if raw.contains("__MACOSX") || raw.hasSuffix(".DS_Store") { continue }
         }
-        let normalized = norm(raw.precomposedStringWithCanonicalMapping)
+        let normalized = norm(stripCP437(raw).precomposedStringWithCanonicalMapping)
         let lower = normalized.pyLower
 
         if item.isDir {
@@ -249,7 +249,7 @@ private func extractListed(_ archivePath: String, flavor: Flavor, progress: ((St
             continue
         }
         if flavor == .rar && (lower.contains("__macosx")) { continue }
-        files[lower] = VirtualFileEntry(path: normalized, isDir: false, size: item.size, data: nil, member: raw)
+        files[lower] = VirtualFileEntry(path: normalized, isDir: false, size: item.size, data: nil, member: item.member)
         addParentDirs(of: normalized, to: &dirs)
         if isEssentialFile(lower) && item.size <= maxPreloadBytes { toLoad.append(lower) }
         if idx % 50 == 0 { progress?("Indexation : \(idx)/\(listed.count) éléments...") }
@@ -260,7 +260,8 @@ private func extractListed(_ archivePath: String, flavor: Flavor, progress: ((St
         let members = toLoad.compactMap { files[$0]?.member }
         let got = readArchiveMembers(archivePath, members: members)
         for k in toLoad {
-            if let e = files[k], let m = e.member, let d = got[m] { e.data = d }
+            // Un membre que bsdtar n'a pas pu décompresser (ZIP deflate64…) laisse un fichier vide ou tronqué : taille de la liste exigée
+            if let e = files[k], let m = e.member, let d = got[m], d.count == e.size { e.data = d }
         }
     }
 
@@ -341,8 +342,9 @@ public func extractMembersToDir(_ index: ArchiveIndex, members: [String], outDir
     guard !uniq.isEmpty, let path = index.archivePath, !isDir(path) else { return out }
     try? FileManager.default.createDirectory(atPath: outDir, withIntermediateDirectories: true)
     progress?("Décompression de \(uniq.count) fichiers depuis l'archive...")
-    bsdtarExtract(path, members: uniq, to: outDir)
+    let failed = bsdtarExtract(path, members: uniq, to: outDir)
     for m in uniq {
+        if failed.contains(stripCP437(m)) { try? FileManager.default.removeItem(atPath: confinedDest(outDir, m)); continue }
         let d = confinedDest(outDir, m)
         if isFile(d) { out[m] = d }
     }

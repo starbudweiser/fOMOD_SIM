@@ -798,5 +798,140 @@
   "FOMOD behavior modeled on Mod Organizer 2, not affiliated with its authors.",
   "Comportamento FOMOD modellato su Mod Organizer 2, senza legami con i suoi autori.",
   "Comportamiento FOMOD basado en Mod Organizer 2, sin relación con sus autores."
+ ],
+ "Fichier": [
+  "File",
+  "File",
+  "Archivo"
+ ],
+ "Édition": [
+  "Edit",
+  "Modifica",
+  "Edición"
+ ],
+ "Langue": [
+  "Language",
+  "Lingua",
+  "Idioma"
+ ],
+ "Fenêtre": [
+  "Window",
+  "Finestra",
+  "Ventana"
+ ],
+ "Réduire": [
+  "Minimize",
+  "Riduci",
+  "Minimizar"
+ ],
+ "Couper": [
+  "Cut",
+  "Taglia",
+  "Cortar"
+ ],
+ "Copier": [
+  "Copy",
+  "Copia",
+  "Copiar"
+ ],
+ "Coller": [
+  "Paste",
+  "Incolla",
+  "Pegar"
+ ],
+ "Tout sélectionner": [
+  "Select All",
+  "Seleziona tutto",
+  "Seleccionar todo"
+ ],
+ "Automatique (système)": [
+  "Automatic (system)",
+  "Automatica (sistema)",
+  "Automático (sistema)"
+ ],
+ "Masquer fOMODSIM": [
+  "Hide fOMODSIM",
+  "Nascondi fOMODSIM",
+  "Ocultar fOMODSIM"
+ ],
+ "Masquer les autres": [
+  "Hide Others",
+  "Nascondi altri",
+  "Ocultar otros"
+ ],
+ "Tout afficher": [
+  "Show All",
+  "Mostra tutto",
+  "Mostrar todo"
+ ],
+ "Quitter fOMODSIM": [
+  "Quit fOMODSIM",
+  "Esci da fOMODSIM",
+  "Salir de fOMODSIM"
+ ],
+ "Ouvrir un FOMOD…": [
+  "Open a FOMOD…",
+  "Apri un FOMOD…",
+  "Abrir un FOMOD…"
+ ],
+ "Dossier": [
+  "Folder",
+  "Cartella",
+  "Carpeta"
+ ],
+ "Erreur": [
+  "Error",
+  "Errore",
+  "Error"
+ ],
+ "ModuleConfig.xml introuvable": [
+  "ModuleConfig.xml not found",
+  "ModuleConfig.xml non trovato",
+  "ModuleConfig.xml no encontrado"
+ ],
+ "L'archive a été ouverte avec succès mais aucun fichier 'fomod/ModuleConfig.xml' n'a été détecté.\nAssurez-vous qu'il s'agit bien d'une archive contenant un installateur FOMOD pour Skyrim.": [
+  "The archive was opened successfully but no 'fomod/ModuleConfig.xml' file was found.\nMake sure it is an archive that contains a FOMOD installer for Skyrim.",
+  "L'archivio è stato aperto ma non è stato trovato alcun file 'fomod/ModuleConfig.xml'.\nVerifica che sia un archivio con un installatore FOMOD per Skyrim.",
+  "El archivo se abrió correctamente pero no se encontró ningún 'fomod/ModuleConfig.xml'.\nAsegúrate de que contiene un instalador FOMOD para Skyrim."
+ ],
+ "Export ZIP": [
+  "ZIP export",
+  "Esportazione ZIP",
+  "Exportación ZIP"
+ ],
+ "{n} fichier(s) n'ont pas pu être lus dans l'archive et manquent dans le ZIP :": [
+  "{n} file(s) could not be read from the archive and are missing from the ZIP:",
+  "{n} file non sono stati letti dall'archivio e mancano nello ZIP:",
+  "{n} archivo(s) no se pudieron leer del archivo y faltan en el ZIP:"
+ ],
+ "Archive illisible : {name}": [
+  "Unreadable archive: {name}",
+  "Archivio illeggibile: {name}",
+  "Archivo ilegible: {name}"
+ ],
+ "Chemin introuvable : {path}": [
+  "Path not found: {path}",
+  "Percorso non trovato: {path}",
+  "Ruta no encontrada: {path}"
+ ],
+ "OK": [
+  "OK",
+  "OK",
+  "OK"
+ ],
+ "Afficher dans le Finder": [
+  "Show in Finder",
+  "Mostra nel Finder",
+  "Mostrar en el Finder"
+ ],
+ "Dossier de staging": [
+  "Staging folder",
+  "Cartella di staging",
+  "Carpeta de staging"
+ ],
+ "{n} / {total}": [
+  "{n} / {total}",
+  "{n} / {total}",
+  "{n} / {total}"
  ]
 }

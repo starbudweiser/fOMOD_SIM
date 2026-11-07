@@ -30,6 +30,11 @@ struct XMLSyntaxError: Error, CustomStringConvertible {
     var description: String { message }
 }
 
+// Foundation supprime certains U+FEFF (espace insécable de largeur nulle) au milieu des textes, Python les garde :
+// on les remplace par un caractère d'usage privé avant l'analyse, puis on les rétablit dans les textes et attributs.
+private let bomStandIn = "\u{10FFFD}"
+private func restoreBOM(_ s: String) -> String { s.contains(bomStandIn) ? s.replacingOccurrences(of: bomStandIn, with: "\u{FEFF}") : s }
+
 private final class TreeBuilder: NSObject, XMLParserDelegate {
     var root: XNode?
     var stack: [XNode] = []
@@ -37,7 +42,7 @@ private final class TreeBuilder: NSObject, XMLParserDelegate {
     var error: String?
 
     func parser(_ parser: XMLParser, didStartElement elementName: String, namespaceURI: String?, qualifiedName qName: String?, attributes attributeDict: [String: String] = [:]) {
-        let node = XNode(tag: elementName, attrib: attributeDict.sorted { $0.key < $1.key }.map { ($0.key, $0.value) })
+        let node = XNode(tag: elementName, attrib: attributeDict.sorted { $0.key < $1.key }.map { ($0.key, restoreBOM($0.value)) })
         if let parent = stack.last {
             parent.children.append(node)
             sawChild[sawChild.count - 1] = true
@@ -55,7 +60,7 @@ private final class TreeBuilder: NSObject, XMLParserDelegate {
 
     private func append(_ s: String) {
         guard let cur = stack.last, sawChild.last == false else { return }
-        cur.text = (cur.text ?? "") + s
+        cur.text = (cur.text ?? "") + restoreBOM(s)
     }
 
     func parser(_ parser: XMLParser, foundCharacters string: String) { append(string) }
@@ -69,7 +74,7 @@ private final class TreeBuilder: NSObject, XMLParserDelegate {
 /// Analyse un texte XML (sans déclaration d'encodage) ; lève `XMLSyntaxError` si le document n'est pas bien formé.
 func parseXMLTree(_ text: String) throws -> XNode {
     let builder = TreeBuilder()
-    let parser = XMLParser(data: Data(text.utf8))
+    let parser = XMLParser(data: Data(text.replacingOccurrences(of: "\u{FEFF}", with: bomStandIn).utf8))
     parser.shouldProcessNamespaces = true
     parser.shouldReportNamespacePrefixes = false
     parser.shouldResolveExternalEntities = false
