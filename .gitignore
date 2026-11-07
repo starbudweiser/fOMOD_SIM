@@ -15,3 +15,5 @@ Icon?
 .env*
 .build_tmp.*/
 ETAT.md
+macos/.build/
+macos/.swiftpm/

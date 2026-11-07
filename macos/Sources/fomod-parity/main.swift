@@ -1,0 +1,2 @@
+import FomodCore
+print("ok")
