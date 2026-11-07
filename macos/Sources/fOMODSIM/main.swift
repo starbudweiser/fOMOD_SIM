@@ -16,7 +16,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         Socle.brand(APP_NAME, "fOMOD_SIM", color: LOGO_BLUE)  // « f » dans le bleu du logo
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
         Splash.shared.start(Splash.Config(title: APP_NAME, subtitle: T("splash.subtitle"),
-                                          footer: version.isEmpty ? T("splash.footer") : T("splash.footer") + " · v" + version, accent: LOGO_BLUE))
+                                          footer: version.isEmpty ? T("splash.footer") : T("splash.footer") + " · v" + version,
+                                          iconView: AnyView(AnimatedBoxIcon()), accent: LOGO_BLUE))
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
