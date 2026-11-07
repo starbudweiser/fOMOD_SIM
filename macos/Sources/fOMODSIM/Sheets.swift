@@ -9,6 +9,8 @@ import SwiftUI
 struct SheetFrame<Content: View>: View {
     let title: String
     var titleColor: Color = Socle.C.textStrong
+    /// Bouton « Fermer » en tête, pour les fenêtres qui n'en ont pas déjà un en bas.
+    var headerClose = true
     let close: () -> Void
     @ViewBuilder var content: Content
 
@@ -17,7 +19,9 @@ struct SheetFrame<Content: View>: View {
             HStack {
                 Text(title).socle(Socle.T.heading).foregroundStyle(titleColor).lineLimit(2)
                 Spacer()
-                Button("✕", action: close).buttonStyle(SocleButtonStyle(.secondary, height: 26)).frame(width: 26)
+                if headerClose {
+                    Button(T("common.close"), action: close).buttonStyle(SocleButtonStyle(.secondary, height: 26)).fixedSize()
+                }
             }
             Divider().overlay(Socle.C.borderSubtle)
             content
@@ -162,7 +166,7 @@ struct ModInfoSheet: View {
     let close: () -> Void
 
     var body: some View {
-        SheetFrame(title: metadata.name, titleColor: Socle.C.action, close: close) {
+        SheetFrame(title: metadata.name, titleColor: Socle.C.action, headerClose: false, close: close) {
             HStack(spacing: 16) {
                 (Text(T("modals.modInfo.author") + " : ").bold() + Text(metadata.author.isEmpty ? "—" : metadata.author)).foregroundStyle(Socle.C.textMuted)
                 (Text(T("modals.modInfo.version") + " : ").bold() + Text(metadata.version.isEmpty ? "1.0" : metadata.version)).foregroundStyle(Socle.C.accentText)
@@ -243,7 +247,7 @@ struct StagingResultSheet: View {
     @State private var rows: [TreeRow] = []
 
     var body: some View {
-        SheetFrame(title: "✓  " + T("ui.stagingDoneBang"), titleColor: Socle.C.success, close: { model.stagingDone = nil }) {
+        SheetFrame(title: "✓  " + T("ui.stagingDoneBang"), titleColor: Socle.C.success, headerClose: false, close: { model.stagingDone = nil }) {
             richText(T("ui.stagingSummary", ["count": done.result.copiedCount, "size": formatBytes(done.result.totalSize), "dest": done.target]))
                 .socle(Socle.T.body).foregroundStyle(Socle.C.textMuted).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
             SocleSegmented(options: [0, 1], selection: tab, label: { $0 == 0 ? T("ui.filesTab") : T("ui.logTab") }, tone: { _ in .strong }) { tab = $0 }
