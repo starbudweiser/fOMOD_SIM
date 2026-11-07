@@ -15,6 +15,8 @@ fOMODSIM walks through a mod's FOMOD installer and previews the result, no mod m
 - FOMOD behavior modeled on Mod Organizer 2, not affiliated with its authors.
 - In the app: **fOMODSIM › About fOMODSIM** (web version: the **About** link in the header).
 
+🍏 **Native Mac app written in Swift, signed and notarized by Apple.** · *Appli Mac native écrite en Swift, signée et notarisée par Apple.*
+
 🇬🇧 [English](#-english) · 🇫🇷 [Français](#-français)
 
 💬 **Support & community:** [Discord](https://discord.gg/xdDVDPQsYs) · *Aide et communauté : [Discord](https://discord.gg/xdDVDPQsYs)*
@@ -67,7 +69,7 @@ The app checks once a day whether a newer release exists on GitHub and offers to
 
 ### Requirements
 
-A Mac with **Apple Silicon** (M1 or later), **macOS 13 Ventura** or later. No Python, no Wine, no virtual machine needed.
+A Mac with **Apple Silicon** (M1 or later), **macOS 13 Ventura** or later. Native Mac app written in Swift and notarized by Apple: no Python, no Wine, no virtual machine needed.
 
 ### Installation
 
@@ -152,7 +154,7 @@ L'appli vérifie une fois par jour si une version plus récente existe sur GitHu
 
 ### Configuration requise
 
-Un Mac **Apple Silicon** (M1 ou plus récent), **macOS 13 Ventura** ou plus récent. Ni Python, ni Wine, ni machine virtuelle.
+Un Mac **Apple Silicon** (M1 ou plus récent), **macOS 13 Ventura** ou plus récent. Appli Mac native écrite en Swift et notarisée par Apple : ni Python, ni Wine, ni machine virtuelle.
 
 ### Installation
 
