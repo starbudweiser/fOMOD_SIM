@@ -39,6 +39,12 @@ Detailed guide: [docs/README.en.md](docs/README.en.md)
 - Built-in **CBBE demo mod** to try the app without any archive.
 - Interface in **English, French, Italian and Spanish** (follows your Mac's language; can be changed in the app).
 
+### What's new in 1.3.1
+
+- The app is now a native macOS (Swift) application, rewritten from the Python version: the same behaviour (checked against the previous engine on about a thousand real mod archives), but no PyInstaller bundle, so antivirus scanners no longer flag it.
+- Archives (ZIP, 7Z, RAR) are read with the macOS system tool `bsdtar`: nothing to install for `.rar` files, and a few archives the old engine could not read now open.
+- Your settings (language) carry over; the bundle identifier is unchanged.
+
 ### What's new in 1.3.0
 
 - Signed with a Developer ID and notarized by Apple: macOS now opens the app without a security warning.
@@ -78,14 +84,14 @@ A Mac with **Apple Silicon** (M1 or later), **macOS 13 Ventura** or later. No Py
 ### FAQ
 
 **A .rar archive won't open.**  
-Install p7zip or unrar (for example `brew install p7zip`).
+A few RAR archives use compression filters that macOS cannot read: extract them with another tool and open the folder, or re-pack them as .zip.
 
 **The archive has no installer.**  
 The mod has no FOMOD wizard: copy its files directly.
 
 ### Building from source
 
-Requires Python 3.12 with PyQt6 and PyInstaller. From the repository folder:
+Requires Xcode (Swift 6). From the repository folder:
 
 ```bash
 ./build_app.sh
@@ -117,6 +123,12 @@ Guide détaillé : [docs/README.fr.md](docs/README.fr.md)
 - Dossier **Data** de Skyrim simulé (facultatif) pour tester les conditions qui dépendent des fichiers.
 - **Mod de démo CBBE** intégré pour essayer l'appli sans archive.
 - Interface en **français, anglais, italien et espagnol** (suit la langue du Mac ; modifiable dans l'appli).
+
+### Nouveautés de la 1.3.1
+
+- L'appli est désormais une application macOS native (Swift), réécrite à partir de la version Python : même comportement (vérifié contre l'ancien moteur sur environ un millier d'archives de mods réelles), mais plus de paquet PyInstaller, donc plus de signalement par les antivirus.
+- Les archives (ZIP, 7Z, RAR) sont lues par l'outil système de macOS `bsdtar` : rien à installer pour les `.rar`, et quelques archives que l'ancien moteur ne savait pas lire s'ouvrent maintenant.
+- Vos réglages (langue) sont conservés ; l'identifiant de l'appli ne change pas.
 
 ### Nouveautés de la 1.3.0
 
@@ -157,14 +169,14 @@ Un Mac **Apple Silicon** (M1 ou plus récent), **macOS 13 Ventura** ou plus réc
 ### Questions fréquentes
 
 **Une archive .rar ne s'ouvre pas.**  
-Installez p7zip ou unrar (par exemple `brew install p7zip`).
+Quelques archives RAR utilisent des filtres de compression que macOS ne sait pas lire : décompressez-les avec un autre outil et ouvrez le dossier, ou refaites-en un .zip.
 
 **L'archive n'a pas d'installateur.**  
 Le mod n'a pas d'assistant FOMOD : copiez directement ses fichiers.
 
 ### Compiler depuis les sources
 
-Nécessite Python 3.12 avec PyQt6 et PyInstaller. Depuis le dossier du dépôt :
+Nécessite Xcode (Swift 6). Depuis le dossier du dépôt :
 
 ```bash
 ./build_app.sh

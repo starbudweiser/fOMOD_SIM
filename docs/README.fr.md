@@ -1,6 +1,6 @@
 # fOMODSIM — Documentation (Français)
 
-🇬🇧 [English version](README.en.md) · 🐧 [Portage Linux / Linux port](LINUX_PORT.md)
+🇬🇧 [English version](README.en.md)
 
 ![Écran d'accueil](images/01_welcome_fr.png)
 
@@ -22,7 +22,7 @@ Fonctionnalités principales :
 ## 2. Pourquoi cette application ?
 
 - Les installeurs FOMOD sont normalement exécutés **uniquement depuis un gestionnaire de mods** (Mod Organizer 2, Vortex…), ce qui rend difficile de savoir *ce qui sera réellement installé* avant de s'engager.
-- Sous **macOS et Linux**, ces gestionnaires sont absents ou difficiles à installer : il n'existait pas d'outil simple pour exploiter un FOMOD.
+- Sous **macOS**, ces gestionnaires sont absents ou difficiles à installer : il n'existait pas d'outil simple pour exploiter un FOMOD.
 - Objectifs : **comprendre** un installeur, **prévisualiser** le résultat, et **préparer** les fichiers de façon sûre et reproductible, sans installation de Skyrim.
 
 ## 3. Prérequis
@@ -30,8 +30,6 @@ Fonctionnalités principales :
 | Version | Prérequis |
 |---|---|
 | **Application macOS** (`fOMODSIM.app`) | macOS sur Apple Silicon (arm64). Aucun Python à installer. |
-| **Python (multi-plateforme)** | Python ≥ 3.9, `PyQt6 ≥ 6.4`, `py7zr ≥ 0.20` |
-| **Fichiers `.rar`** (optionnel) | `7-Zip`/`p7zip`, `unrar` ou `bsdtar` installé (ex. `brew install p7zip`) |
 
 Skyrim n'a **pas** besoin d'être installé.
 
@@ -42,12 +40,6 @@ Skyrim n'a **pas** besoin d'être installé.
 1. Décompressez `fOMODSIM_macOS_arm64.zip` (ou utilisez `fOMODSIM.app`).
 2. Glissez `fOMODSIM.app` dans `/Applications`.
 
-### Python (macOS / Windows / Linux)
-
-```bash
-pip install -r python_app/requirements.txt
-python3 -m python_app.main
-```
 
 ## 5. Mode d'emploi
 
@@ -86,8 +78,6 @@ Sur l'écran d'accueil, choisissez la langue (🇫🇷 🇬🇧 🇮🇹 🇪�
 
 | Problème | Solution |
 |---|---|
-| Impossible d'ouvrir un `.rar` | Installer `p7zip` ou `unrar`. |
-| `ModuleNotFoundError: PyQt6` | `pip install -r python_app/requirements.txt`. |
 | L'archive n'a pas d'installeur FOMOD | Le mod s'installe sans assistant : copiez-le directement. |
 
 ## 7. Compiler soi-même (macOS)

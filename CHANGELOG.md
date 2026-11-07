@@ -6,10 +6,16 @@ Notes de version / release notes (EN + FR). Translations in IT and ES: see the N
 
 **English**
 
+- The app is now a native macOS (Swift) application, rewritten from the Python version: same behaviour (checked against the previous engine on about a thousand real mod archives), no PyInstaller bundle, so antivirus scanners no longer flag it.
+- Archives (ZIP, 7Z, RAR) are read with the macOS system tool `bsdtar`: nothing to install for `.rar` files, and a few archives the old engine could not read now open.
+- Your settings carry over; the bundle identifier is unchanged.
 - Opening a FOMOD passed to the app at launch (for example with “Open With” in the Finder) works again: the app used to quit instead of loading it.
 
 **Français**
 
+- L'appli est désormais une application macOS native (Swift), réécrite à partir de la version Python : même comportement (vérifié contre l'ancien moteur sur environ un millier d'archives de mods réelles), plus de paquet PyInstaller, donc plus de signalement par les antivirus.
+- Les archives (ZIP, 7Z, RAR) sont lues par l'outil système de macOS `bsdtar` : rien à installer pour les `.rar`, et quelques archives que l'ancien moteur ne savait pas lire s'ouvrent maintenant.
+- Vos réglages sont conservés ; l'identifiant de l'appli ne change pas.
 - Ouvrir un FOMOD passé à l'appli au lancement (par exemple avec « Ouvrir avec » dans le Finder) fonctionne de nouveau : l'appli se fermait au lieu de le charger.
 
 ## 1.3.0

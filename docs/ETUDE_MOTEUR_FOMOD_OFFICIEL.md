@@ -5,7 +5,7 @@ Source étudiée : `github.com/Nexus-Mods/fomod-installer` (C#, GPL-3.0). C'est 
 ## Verdict
 
 **Ne pas remplacer notre moteur, mais l'aligner sur l'officiel et réutiliser ses données de test.**
-- Notre moteur Python couvre déjà l'essentiel : les étapes visibles, les flags, les types d'option, l'ordre `Explicit/Ascending/Descending`, `alwaysInstall` et `installIfUsable`, les dépendances de fichier.
+- Notre moteur (Swift, repris du moteur Python d'origine) couvre déjà l'essentiel : les étapes visibles, les flags, les types d'option, l'ordre `Explicit/Ascending/Descending`, `alwaysInstall` et `installIfUsable`, les dépendances de fichier.
 - Embarquer le moteur C# (dylib NativeAOT osx-arm64 appelée par ctypes) ajouterait une chaîne de build .NET pour un gain limité. Ce gain se résume aux scripts C# et aux vieux formats CPL et OMOD, qui sont rares.
 - Pas de copie de code : fOMOD_SIM est sous MIT et le moteur sous GPL-3.0. On réimplémente le **comportement**, ce qui est permis, sans recopier les sources.
 

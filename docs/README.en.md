@@ -1,6 +1,6 @@
 # fOMODSIM — Documentation (English)
 
-🇫🇷 [Version française](README.fr.md) · 🐧 [Linux port / Portage Linux](LINUX_PORT.md)
+🇫🇷 [Version française](README.fr.md)
 
 ![Welcome screen](images/01_welcome_en.png)
 
@@ -22,7 +22,7 @@ Key features:
 ## 2. Why this application?
 
 - FOMOD installers normally run **only inside a mod manager** (Mod Organizer 2, Vortex…), making it hard to know *what will really be installed* before committing.
-- On **macOS and Linux** those managers are missing or hard to set up: no simple tool existed to work with a FOMOD.
+- On **macOS** those managers are missing or hard to set up: no simple tool existed to work with a FOMOD.
 - Goals: **understand** an installer, **preview** its outcome, and **prepare** files in a safe, reproducible way, with no Skyrim install required.
 
 ## 3. Requirements
@@ -30,8 +30,6 @@ Key features:
 | Edition | Requirements |
 |---|---|
 | **macOS app** (`fOMODSIM.app`) | macOS on Apple Silicon (arm64). No Python needed. |
-| **Python (cross-platform)** | Python ≥ 3.9, `PyQt6 ≥ 6.4`, `py7zr ≥ 0.20` |
-| **`.rar` files** (optional) | `7-Zip`/`p7zip`, `unrar` or `bsdtar` installed (e.g. `brew install p7zip`) |
 
 Skyrim does **not** need to be installed.
 
@@ -42,12 +40,6 @@ Skyrim does **not** need to be installed.
 1. Unzip `fOMODSIM_macOS_arm64.zip` (or use `fOMODSIM.app`).
 2. Drag `fOMODSIM.app` into `/Applications`.
 
-### Python (macOS / Windows / Linux)
-
-```bash
-pip install -r python_app/requirements.txt
-python3 -m python_app.main
-```
 
 ## 5. User guide
 
@@ -86,8 +78,6 @@ On the welcome screen choose your language (🇫🇷 🇬🇧 🇮🇹 🇪🇸)
 
 | Problem | Fix |
 |---|---|
-| Cannot open a `.rar` | Install `p7zip` or `unrar`. |
-| `ModuleNotFoundError: PyQt6` | `pip install -r python_app/requirements.txt`. |
 | Archive has no FOMOD installer | The mod has no wizard: copy it directly. |
 
 ## 7. Build it yourself (macOS)

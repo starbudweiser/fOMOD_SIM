@@ -7,14 +7,14 @@ Simulateur d'installation de mods FOMOD pour Skyrim (FR/EN/IT/ES).
 ```
 fOMOD_SIM/
 ├── fOMODSIM.app     # application macOS compilée (générée par build_app.sh)
-├── build_app.sh            # compilation + signature + nettoyage
-├── python_app/             # application Python (PyQt6) modulaire
+├── build_app.sh            # lance macos/build_app.sh (traductions, tests, compilation, signature)
+├── macos/                  # application Swift (SwiftUI) : Package.swift, Sources, Tests
+│   └── Sources/FomodCore/  # moteur FOMOD (analyse, session, staging, archives par bsdtar), sans interface
+├── i18n/                   # traductions fr/en/it/es (strings.json, ids.json) : source de macos/…/Strings.swift
 ├── web/                    # version web (React / Vite) : src, public, package.json…
 ├── dist/                   # build web (généré par npm run build, non versionné)
-├── packaging/              # spec PyInstaller
-├── scripts/                # lanceurs .command (Python, Web)
+├── scripts/                # lanceur .command (Web)
 ├── assets/                 # icônes (icon.icns, icon.png)
-├── tests/                  # tests unitaires Python
 ├── docs/                   # documentation FR/EN, fiche Nexus, captures
 └── _ARCHIVES/              # versions de référence (non versionné)
 ```
@@ -22,23 +22,21 @@ fOMOD_SIM/
 ## Lancement
 
 - **Application macOS** : `fOMODSIM.app`
-- **Python (PyQt6)** : `python3 -m python_app.main` ou `./scripts/run_python.command`
 - **Web (React/Vite)** : `cd web && npm install && npm run dev` (ou `./scripts/run_web.command`)
 
 ## Build
 
-- Application macOS signée (générée à la racine, temporaires supprimés) : `./build_app.sh`
+- Application macOS signée (générée à la racine) : `./build_app.sh` (ou `../_tools/build_all.sh fOMOD_SIM`, qui l'installe dans `~/Applications/Skyrim Tools`)
 
 ## Tests
 
 ```bash
-python3 -m unittest discover tests
+cd macos && swift test      # moteur FOMOD, session, staging, plugins, traductions
 cd web && npm run lint
 ```
 
 ## Documentation
 
-- [Français](docs/README.fr.md)
-- [English](docs/README.en.md)
-- [Linux](docs/LINUX_PORT.md)
-- [Fiche Nexus Mods](docs/NEXUS_PAGE.md)
+- [Français](README.fr.md)
+- [English](README.en.md)
+- [Fiche Nexus Mods](NEXUS_PAGE.md)
