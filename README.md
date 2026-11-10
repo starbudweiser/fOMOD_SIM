@@ -2,12 +2,13 @@
 
 # fOMODSIM
 
-[![Listed on OpenMacApps](https://openmacapps.com/badge.svg)](https://openmacapps.com/apps/fomodsim/)
+[![Listed on OpenMacApps](https://openmacapps.com/badge.svg)](https://openmacapps.com/apps/fomodsim/) [![Latest release](https://img.shields.io/github/v/release/starbudweiser/fOMOD_SIM)](https://github.com/starbudweiser/fOMOD_SIM/releases/latest) [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-**FOMOD installer simulator: walk through a mod's installer and preview the result, no mod manager needed.**  
-*Simulateur d'installateurs FOMOD : parcourez l'installateur d'un mod et prévisualisez le résultat, sans gestionnaire de mods.*
+**FOMOD installer simulator: walk through a mod's installer and preview the result, no mod manager needed.**
 
-### About
+🇬🇧 English · 🇫🇷 [Français](#français)
+
+## About
 
 fOMODSIM walks through a mod's FOMOD installer and previews the result, no mod manager needed.
 
@@ -17,22 +18,13 @@ fOMODSIM walks through a mod's FOMOD installer and previews the result, no mod m
 - FOMOD behavior modeled on Mod Organizer 2, not affiliated with its authors.
 - In the app: **fOMODSIM › About fOMODSIM** (web version: the **About** link in the header).
 
-🍏 **Native Mac app written in Swift, signed and notarized by Apple.** · *Appli Mac native écrite en Swift, signée et notarisée par Apple.*
-
-🇬🇧 [English](#-english) · 🇫🇷 [Français](#-français)
-
-💬 **Support & community:** [Discord](https://discord.gg/xdDVDPQsYs) · *Aide et communauté : [Discord](https://discord.gg/xdDVDPQsYs)*
-
----
-## 🇬🇧 English
-
-### What it does
+🍏 **Native Mac app written in Swift, signed and notarized by Apple.**
 
 FOMOD installers normally only run inside Mod Organizer 2 or Vortex, which are hard to use on a Mac. fOMODSIM opens a mod archive, lets you go through its installation steps, evaluates its conditions and flags, and copies the resulting files to a staging folder.
 
 Detailed guide: [docs/README.en.md](docs/README.en.md)
 
-### Features
+## Features
 
 - Opens **.zip, .7z, .rar** archives or an unpacked folder (drag and drop supported).
 - Step-by-step navigation, single and multiple choices, recommended options pre-selected.
@@ -57,10 +49,6 @@ Detailed guide: [docs/README.en.md](docs/README.en.md)
 - The first letter of the app's name now uses the colour of its logo everywhere it appears.
 - Version number aligned across the Skyrim Mac Toolkit.
 
-### Updates
-
-The app checks once a day whether a newer release exists on GitHub and offers to open the Nexus page, remind you later or skip that version. Nothing is downloaded or installed automatically. The full history is in [CHANGELOG.md](CHANGELOG.md).
-
 ### Screenshots
 
 ![Welcome screen](docs/screenshots/01_home.png)
@@ -69,9 +57,13 @@ The app checks once a day whether a newer release exists on GitHub and offers to
 ![Installer step with option preview](docs/screenshots/02_steps.png)
 *Installer step with option preview*
 
+## Install
+
+**[Download the latest notarized release](https://github.com/starbudweiser/fOMOD_SIM/releases/latest)** · requires **macOS 15 Sequoia** or later on Apple Silicon.
+
 ### Requirements
 
-A Mac with **Apple Silicon** (M1 or later), **macOS 13 Ventura** or later. Native Mac app written in Swift and notarized by Apple: no Python, no Wine, no virtual machine needed.
+A Mac with **Apple Silicon** (M1 or later), **macOS 15 Sequoia** or later. Native Mac app written in Swift and notarized by Apple: no Python, no Wine, no virtual machine needed.
 
 ### Installation
 
@@ -85,15 +77,11 @@ A Mac with **Apple Silicon** (M1 or later), **macOS 13 Ventura** or later. Nativ
 3. Choose the **Staging destination…** (Desktop by default) and, optionally, a **Skyrim Data folder…**.
 4. Click **GENERATE STAGING**: the selected files are copied, ready to be added to your game or a modlist.
 
-### FAQ
+### Updates
 
-**A .rar archive won't open.**  
-A few RAR archives use compression filters that macOS cannot read: extract them with another tool and open the folder, or re-pack them as .zip.
+The app checks once a day whether a newer release exists on GitHub and offers to open the Nexus page, remind you later or skip that version. Nothing is downloaded or installed automatically. The full history is in [CHANGELOG.md](CHANGELOG.md).
 
-**The archive has no installer.**  
-The mod has no FOMOD wizard: copy its files directly.
-
-### Building from source
+## Build
 
 Requires Xcode (Swift 6). From the repository folder:
 
@@ -103,13 +91,35 @@ Requires Xcode (Swift 6). From the repository folder:
 
 → [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)
 
-### License
+## Languages
 
-Released under the **MIT License**: free to use, modify and share. Part of the **Skyrim Mac Toolkit**, a set of modding tools built for Skyrim players on Mac.
+English, French, Spanish and Italian. The app follows your Mac's preferred language automatically (English if it is none of these four).
+
+## Support
+
+💬 Help and community: [Skyrim Mac Toolkit Discord](https://discord.gg/jRS4rvynx6) · bug reports: [GitHub Issues](https://github.com/starbudweiser/fOMOD_SIM/issues).
+
+### FAQ
+
+**A .rar archive won't open.**  
+A few RAR archives use compression filters that macOS cannot read: extract them with another tool and open the folder, or re-pack them as .zip.
+
+**The archive has no installer.**  
+The mod has no FOMOD wizard: copy its files directly.
+
+## License
+
+Released under the **MIT License**: free to use, modify and share. Part of the **Skyrim Mac Toolkit**, a set of modding tools built for Skyrim players on Mac. See [LICENSE](LICENSE).
 
 ---
 
-## 🇫🇷 Français
+## Français
+
+**Simulateur d'installateurs FOMOD : parcourez l'installateur d'un mod et prévisualisez le résultat, sans gestionnaire de mods.**
+
+🍏 *Appli Mac native écrite en Swift, signée et notarisée par Apple.*
+
+💬 Aide et communauté : [Discord du Skyrim Mac Toolkit](https://discord.gg/jRS4rvynx6)
 
 ### À quoi ça sert
 
@@ -156,7 +166,7 @@ L'appli vérifie une fois par jour si une version plus récente existe sur GitHu
 
 ### Configuration requise
 
-Un Mac **Apple Silicon** (M1 ou plus récent), **macOS 13 Ventura** ou plus récent. Appli Mac native écrite en Swift et notarisée par Apple : ni Python, ni Wine, ni machine virtuelle.
+Un Mac **Apple Silicon** (M1 ou plus récent), **macOS 15 Sequoia** ou plus récent. Appli Mac native écrite en Swift et notarisée par Apple : ni Python, ni Wine, ni machine virtuelle.
 
 ### Installation
 
