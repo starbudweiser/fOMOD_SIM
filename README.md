@@ -2,6 +2,8 @@
 
 # fOMODSIM
 
+[![Listed on OpenMacApps](https://openmacapps.com/badge.svg)](https://openmacapps.com/apps/fomodsim/)
+
 **FOMOD installer simulator: walk through a mod's installer and preview the result, no mod manager needed.**  
 *Simulateur d'installateurs FOMOD : parcourez l'installateur d'un mod et prévisualisez le résultat, sans gestionnaire de mods.*
 
